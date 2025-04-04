@@ -10,7 +10,7 @@ Blogspot post ([archive link](https://web.archive.org/web/20250404004600/https:/
 - .NET 8 ([download](https://dotnet.microsoft.com/en-us/download/dotnet/8.0))
 
 **Download:**
-- [This includes the CMS, SWFs, etc.](https://h4bbo.net/archive/Habbo%20Archives/Flash/PACK%20HABBO%20BETA%20RETRO%20V54.rar) 
+- [This includes the DB, CMS, SWFs, etc.](https://h4bbo.net/archive/Habbo%20Archives/Flash/PACK%20HABBO%20BETA%20RETRO%20V54.rar) 
 
 *Do not use the compiled emulator in this download, use the source code from* **this repository** *as the compiled version is outdated and contains security flaws*
 
