@@ -83,7 +83,7 @@ internal class Pathfinder
 		bool MadeProgress;
 		do
 		{
-			bool flag = true;
+			// bool flag = true;
 			MadeProgress = false;
 			foreach (Point MainPoint in GetSquares())
 			{
@@ -118,7 +118,7 @@ internal class Pathfinder
 		Path.Add(new Coord(User.GoalX, User.GoalY));
 		do
 		{
-			bool flag = true;
+			// bool flag = true;
 			Point lowestPoint = Point.Empty;
 			int lowest = 100;
 			foreach (Point movePoint in ValidMoves(goalX, goalY))

@@ -11,7 +11,7 @@ public class LowPriorityWorker
 		Thread.Sleep(10000);
 		while (true)
 		{
-			bool flag = true;
+			// bool flag = true;
 			GC.Collect();
 			GC.WaitForPendingFinalizers();
 			int Status = 1;

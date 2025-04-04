@@ -203,10 +203,12 @@ internal class GameClientManager
 		{
 			try
 			{
-				ConnectionChecker.Abort();
-			}
-			catch (ThreadAbortException)
-			{
+                // Migration to .NET 8
+                // ConnectionChecker.Abort();
+                ConnectionChecker.Interrupt();
+            }
+            catch (ThreadInterruptedException) // catch (ThreadAbortException)
+            {
 			}
 			ConnectionChecker = null;
 		}
@@ -221,7 +223,7 @@ internal class GameClientManager
 		}
 		while (true)
 		{
-			bool flag = true;
+			//bool flag = true;
 			ServerMessage PingMessage = new ServerMessage(50u);
 			try
 			{

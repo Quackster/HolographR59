@@ -129,7 +129,9 @@ internal class Game
 		{
 			try
 			{
-				StatisticsThread.Abort();
+				// Migration to .NET 8
+                // StatisticsThread.Abort(); 
+                StatisticsThread.Interrupt();
 			}
 			catch (ThreadAbortException)
 			{

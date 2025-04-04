@@ -25,7 +25,7 @@ internal class HolographEnvironment
 
 	private static Game Game;
 
-	public static string Titulo = Console.Title;
+	// public static string Titulo = Console.Title;
 
 	public static string Versao => "Holograph Emulator R59 +";
 

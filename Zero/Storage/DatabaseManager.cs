@@ -118,7 +118,7 @@ internal class DatabaseManager
 	{
 		while (true)
 		{
-			bool flag = true;
+			// bool flag = true;
 			try
 			{
 				DateTime DT = DateTime.Now;
@@ -199,9 +199,11 @@ internal class DatabaseManager
 		{
 			try
 			{
-				ClientMonitor.Abort();
+                // Migration to .NET 8
+                // ClientMonitor.Abort();
+				ClientMonitor.Interrupt();
 			}
-			catch (ThreadAbortException)
+			catch (ThreadInterruptedException) // catch (ThreadAbortException)
 			{
 			}
 			ClientMonitor = null;

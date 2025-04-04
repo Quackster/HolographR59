@@ -40,7 +40,7 @@ internal class AdvertisementManager
 		int RndId;
 		do
 		{
-			bool flag = true;
+			// bool flag = true;
 			RndId = HolographEnvironment.GetRandomNumber(0, RoomAdvertisements.Count - 1);
 		}
 		while (RoomAdvertisements[RndId] == null || RoomAdvertisements[RndId].ExceededLimit);

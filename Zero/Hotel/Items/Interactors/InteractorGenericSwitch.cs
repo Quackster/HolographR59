@@ -29,7 +29,7 @@ internal class InteractorGenericSwitch : FurniInteractor
 		if (UserHasRights && Modes != 0)
 		{
 			int currentMode = 0;
-			int newMode = 0;
+			// int newMode = 0;
 			try
 			{
 				currentMode = int.Parse(Item.ExtraData);

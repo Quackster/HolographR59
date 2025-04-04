@@ -1345,13 +1345,17 @@ internal class Room
 	{
 		if (HasThread.ContainsKey(User.HabboId))
 		{
-			HasThread[User.HabboId].Abort();
-			HasThread.Remove(User.HabboId);
+            // Migration to .NET 8
+            // HasThread[User.HabboId].Abort();
+            BallThread[User.HabboId].Interrupt();
+            HasThread.Remove(User.HabboId);
 		}
 		if (BallThread.ContainsKey(User.HabboId))
 		{
-			BallThread[User.HabboId].Abort();
-			BallThread.Remove(User.HabboId);
+            // Migration to .NET 8
+            // BallThread[User.HabboId].Abort();
+            BallThread[User.HabboId].Interrupt();
+            BallThread.Remove(User.HabboId);
 		}
 		if (User.Statusses.ContainsKey("lay") || User.Statusses.ContainsKey("sit"))
 		{

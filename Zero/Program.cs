@@ -6,7 +6,7 @@ namespace Zero;
 
 public class Program
 {
-	[SecurityPermission(SecurityAction.Demand, Flags = SecurityPermissionFlag.ControlAppDomain)]
+	// [SecurityPermission(SecurityAction.Demand, Flags = SecurityPermissionFlag.ControlAppDomain)]
 	public static void Main(string[] args)
 	{
 		AppDomain currentDomain = AppDomain.CurrentDomain;

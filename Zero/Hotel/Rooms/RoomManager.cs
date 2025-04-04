@@ -67,7 +67,7 @@ internal class RoomManager
 		Thread.Sleep(5000);
 		while (true)
 		{
-			bool flag = true;
+			// bool flag = true;
 			DateTime ExecutionStart = DateTime.Now;
 			try
 			{
