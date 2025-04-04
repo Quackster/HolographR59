@@ -139,21 +139,21 @@ internal class Catalog
 		{
 			return;
 		}
-		if (Page.MinRank > Session.GetHabbo().Rank || !Page.Visible)
-		{
-			Session.SendNotif("Tentativa de Hacking Detectada");
-			return;
-		}
-		if (Page.ClubOnly && !Session.GetHabbo().GetSubscriptionManager().HasSubscription("habbo_vip"))
-		{
-			Session.SendNotif("¡Esta página es sólo para miembros del club!");
-			return;
-		}
-		if (Page.ClubOnly && !Session.GetHabbo().GetSubscriptionManager().HasSubscription("habbo_club"))
-		{
-			Session.SendNotif("¡Esta página es sólo para miembros del club!");
-			return;
-		}
+        if (Page.MinRank > Session.GetHabbo().Rank || !Page.Visible)
+        {
+            Session.SendNotif("Hacking Attempt Detected");
+            return;
+        }
+        if (Page.ClubOnly && !Session.GetHabbo().GetSubscriptionManager().HasSubscription("habbo_vip"))
+        {
+            Session.SendNotif("This page is for club members only!");
+            return;
+        }
+        if (Page.ClubOnly && !Session.GetHabbo().GetSubscriptionManager().HasSubscription("habbo_club"))
+        {
+            Session.SendNotif("This page is for club members only!");
+            return;
+        }
 		CatalogItem Item = Page.GetItem(ItemId);
 		if (Item == null)
 		{
@@ -676,103 +676,104 @@ internal class Catalog
 		ServerMessage PageDataVip = new ServerMessage(270527613u);
 		switch (Page.Layout)
 		{
-		case "frontpage":
-			PageData.AppendStringWithBreak("frontpage3");
-			PageData.AppendInt32(3);
-			PageData.AppendStringWithBreak(Page.LayoutHeadline);
-			PageData.AppendStringWithBreak(Page.LayoutTeaser);
-			PageData.AppendStringWithBreak("");
-			PageData.AppendInt32(11);
-			PageData.AppendStringWithBreak(Page.Text1);
-			PageData.AppendStringWithBreak("");
-			PageData.AppendStringWithBreak(Page.Text2);
-			PageData.AppendStringWithBreak(Page.TextDetails);
-			PageData.AppendStringWithBreak("");
-			PageData.AppendStringWithBreak("#FAF8CC");
-			PageData.AppendStringWithBreak("#FAF8CC");
-			PageData.AppendStringWithBreak("Otras maneras de conseguir créditos >>");
-			PageData.AppendStringWithBreak("magic.credits");
-			break;
-		case "recycler_info":
-			PageData.AppendStringWithBreak(Page.Layout);
-			PageData.AppendInt32(2);
-			PageData.AppendStringWithBreak(Page.LayoutHeadline);
-			PageData.AppendStringWithBreak(Page.LayoutTeaser);
-			PageData.AppendInt32(3);
-			PageData.AppendStringWithBreak(Page.Text1);
-			PageData.AppendStringWithBreak(Page.Text2);
-			PageData.AppendStringWithBreak(Page.TextDetails);
-			break;
-		case "recycler_prizes":
-			PageData.AppendStringWithBreak("recycler_prizes");
-			PageData.AppendInt32(1);
-			PageData.AppendStringWithBreak("catalog_recycler_headline3");
-			PageData.AppendInt32(1);
-			PageData.AppendStringWithBreak(Page.Text1);
-			break;
-		case "club_buy":
-			PageData.AppendStringWithBreak("club_buy");
-			PageData.AppendInt32(1);
-			PageData.AppendStringWithBreak("hc2_clubtitle");
-			PageData.AppendInt32(1);
-			break;
-		case "club_gifts":
-			PageData.AppendStringWithBreak("club_gifts");
-			PageData.AppendInt32(1);
-			PageData.AppendStringWithBreak("hc2_clubtitle");
-			PageData.AppendInt32(1);
-			PageData.AppendStringWithBreak("Echa un vistazo a los regalos HC y VIP, si eres HC, podrías elegir entre una selección de  reglaos HC. Si eres VIP, entre una selección de regalso VIP.");
-			PageData.AppendInt32(1);
-			break;
-		case "spaces":
-			PageData.AppendStringWithBreak(Page.Layout);
-			PageData.AppendInt32(1);
-			PageData.AppendStringWithBreak(Page.LayoutHeadline);
-			PageData.AppendInt32(1);
-			PageData.AppendStringWithBreak(Page.Text1);
-			break;
-		case "recycler":
-			PageData.AppendStringWithBreak(Page.Layout);
-			PageData.AppendInt32(2);
-			PageData.AppendStringWithBreak(Page.LayoutHeadline);
-			PageData.AppendStringWithBreak(Page.LayoutTeaser);
-			PageData.AppendInt32(1);
-			PageData.AppendStringWithBreak(Page.Text1, 10);
-			PageData.AppendStringWithBreak(Page.Text2);
-			PageData.AppendStringWithBreak(Page.TextDetails);
-			break;
-		case "trophies":
-			PageData.AppendStringWithBreak("trophies");
-			PageData.AppendInt32(1);
-			PageData.AppendStringWithBreak(Page.LayoutHeadline);
-			PageData.AppendInt32(2);
-			PageData.AppendStringWithBreak(Page.Text1);
-			PageData.AppendStringWithBreak(Page.TextDetails);
-			break;
-		case "pets":
-			PageData.AppendStringWithBreak("pets");
-			PageData.AppendInt32(2);
-			PageData.AppendStringWithBreak(Page.LayoutHeadline);
-			PageData.AppendStringWithBreak(Page.LayoutTeaser);
-			PageData.AppendInt32(4);
-			PageData.AppendStringWithBreak(Page.Text1);
-			PageData.AppendStringWithBreak("Dê um Nome:");
-			PageData.AppendStringWithBreak("Escolha uma cor:");
-			PageData.AppendStringWithBreak("Escolha uma raça:");
-			break;
-		default:
-			PageData.AppendStringWithBreak(Page.Layout);
-			PageData.AppendInt32(3);
-			PageData.AppendStringWithBreak(Page.LayoutHeadline);
-			PageData.AppendStringWithBreak(Page.LayoutTeaser);
-			PageData.AppendStringWithBreak(Page.LayoutSpecial);
-			PageData.AppendInt32(3);
-			PageData.AppendStringWithBreak(Page.Text1);
-			PageData.AppendStringWithBreak(Page.TextDetails);
-			PageData.AppendStringWithBreak(Page.TextTeaser);
-			break;
-		}
-		PageData.AppendInt32(Page.Items.Count);
+            case "frontpage":
+                PageData.AppendStringWithBreak("frontpage3");
+                PageData.AppendInt32(3);
+                PageData.AppendStringWithBreak(Page.LayoutHeadline);
+                PageData.AppendStringWithBreak(Page.LayoutTeaser);
+                PageData.AppendStringWithBreak("");
+                PageData.AppendInt32(11);
+                PageData.AppendStringWithBreak(Page.Text1);
+                PageData.AppendStringWithBreak("");
+                PageData.AppendStringWithBreak(Page.Text2);
+                PageData.AppendStringWithBreak(Page.TextDetails);
+                PageData.AppendStringWithBreak("");
+                PageData.AppendStringWithBreak("#FAF8CC");
+                PageData.AppendStringWithBreak("#FAF8CC");
+                PageData.AppendStringWithBreak("Other ways to get credits >>");
+                PageData.AppendStringWithBreak("magic.credits");
+                break;
+            case "recycler_info":
+                PageData.AppendStringWithBreak(Page.Layout);
+                PageData.AppendInt32(2);
+                PageData.AppendStringWithBreak(Page.LayoutHeadline);
+                PageData.AppendStringWithBreak(Page.LayoutTeaser);
+                PageData.AppendInt32(3);
+                PageData.AppendStringWithBreak(Page.Text1);
+                PageData.AppendStringWithBreak(Page.Text2);
+                PageData.AppendStringWithBreak(Page.TextDetails);
+                break;
+            case "recycler_prizes":
+                PageData.AppendStringWithBreak("recycler_prizes");
+                PageData.AppendInt32(1);
+                PageData.AppendStringWithBreak("catalog_recycler_headline3");
+                PageData.AppendInt32(1);
+                PageData.AppendStringWithBreak(Page.Text1);
+                break;
+            case "club_buy":
+                PageData.AppendStringWithBreak("club_buy");
+                PageData.AppendInt32(1);
+                PageData.AppendStringWithBreak("hc2_clubtitle");
+                PageData.AppendInt32(1);
+                break;
+            case "club_gifts":
+                PageData.AppendStringWithBreak("club_gifts");
+                PageData.AppendInt32(1);
+                PageData.AppendStringWithBreak("hc2_clubtitle");
+                PageData.AppendInt32(1);
+                PageData.AppendStringWithBreak("Take a look at the HC and VIP gifts, if you are HC, you could choose from a selection of HC gifts. If you are VIP, choose from a selection of VIP gifts.");
+                PageData.AppendInt32(1);
+                break;
+            case "spaces":
+                PageData.AppendStringWithBreak(Page.Layout);
+                PageData.AppendInt32(1);
+                PageData.AppendStringWithBreak(Page.LayoutHeadline);
+                PageData.AppendInt32(1);
+                PageData.AppendStringWithBreak(Page.Text1);
+                break;
+            case "recycler":
+                PageData.AppendStringWithBreak(Page.Layout);
+                PageData.AppendInt32(2);
+                PageData.AppendStringWithBreak(Page.LayoutHeadline);
+                PageData.AppendStringWithBreak(Page.LayoutTeaser);
+                PageData.AppendInt32(1);
+                PageData.AppendStringWithBreak(Page.Text1, 10);
+                PageData.AppendStringWithBreak(Page.Text2);
+                PageData.AppendStringWithBreak(Page.TextDetails);
+                break;
+            case "trophies":
+                PageData.AppendStringWithBreak("trophies");
+                PageData.AppendInt32(1);
+                PageData.AppendStringWithBreak(Page.LayoutHeadline);
+                PageData.AppendInt32(2);
+                PageData.AppendStringWithBreak(Page.Text1);
+                PageData.AppendStringWithBreak(Page.TextDetails);
+                break;
+            case "pets":
+                PageData.AppendStringWithBreak("pets");
+                PageData.AppendInt32(2);
+                PageData.AppendStringWithBreak(Page.LayoutHeadline);
+                PageData.AppendStringWithBreak(Page.LayoutTeaser);
+                PageData.AppendInt32(4);
+                PageData.AppendStringWithBreak(Page.Text1);
+                PageData.AppendStringWithBreak("Give a Name:");
+                PageData.AppendStringWithBreak("Choose a color:");
+                PageData.AppendStringWithBreak("Choose a breed:");
+                break;
+            default:
+                PageData.AppendStringWithBreak(Page.Layout);
+                PageData.AppendInt32(3);
+                PageData.AppendStringWithBreak(Page.LayoutHeadline);
+                PageData.AppendStringWithBreak(Page.LayoutTeaser);
+                PageData.AppendStringWithBreak(Page.LayoutSpecial);
+                PageData.AppendInt32(3);
+                PageData.AppendStringWithBreak(Page.Text1);
+                PageData.AppendStringWithBreak(Page.TextDetails);
+                PageData.AppendStringWithBreak(Page.TextTeaser);
+                break;
+        }
+
+        PageData.AppendInt32(Page.Items.Count);
 		lock (Page.Items)
 		{
 			foreach (CatalogItem Item in Page.Items)

@@ -36,12 +36,13 @@ internal class ItemManager
 				}
 			}
 		}
-		Console.ForegroundColor = ConsoleColor.Green;
-		Console.WriteLine("[stringManager.Init] » Verificando tabela users..");
-		Console.WriteLine("[stringManager.Init] » Hotel iniciando na linguagem PT-BR");
-		Console.WriteLine("[stringManager.Init] » Mensagem de Boas Vindas Desativada.");
-		Console.WriteLine("");
-		if (j > 0)
+        Console.ForegroundColor = ConsoleColor.Green;
+        Console.WriteLine("[stringManager.Init] » Checking users table..");
+        Console.WriteLine("[stringManager.Init] » Hotel starting in PT-BR language");
+        Console.WriteLine("[stringManager.Init] » Welcome message disabled.");
+        Console.WriteLine("");
+
+        if (j > 0)
 		{
 			HolographEnvironment.GetLogging().WriteLine(j + " item defenition(s) could not be loaded.");
 		}

@@ -25,68 +25,69 @@ internal class HolographEnvironment
 
 	private static Game Game;
 
-	// public static string Titulo = Console.Title;
+    // public static string Titulo = Console.Title;
 
-	public static string Versao => "Holograph Emulator R59 +";
+    public static string Version => "Holograph Emulator R59 +";
 
-	public static void Initialize()
-	{
-		Console.Title = Versao;
-		DefaultEncoding = Encoding.Default;
-		Logging = new Logging();
-		Logging.MinimumLogLevel = LogLevel.Debug;
-		GetLogging().WriteLine("HOLOGRAPH EMULATOR");
-		GetLogging().WriteLine("EMULADOR GRATIS BASEADO NO HABBO HOTEL EMULADOR");
-		GetLogging().WriteLine("COPYRIGHT (C) 2007-2010 BY HOLOGRAPH TEAM");
-		GetLogging().WriteLine("");
-		GetLogging().WriteLine("VERSÃO:");
-		GetLogging().WriteLine(" CORE: C#.NET");
-		GetLogging().WriteLine(" CLIENT: R59 +");
-		GetLogging().WriteLine(" STABLE CLIENT: R59+");
-		GetLogging().WriteLine("Marlon Colhado & Shine-Away's R59 Emulator (Holograph BR)");
-		Console.ForegroundColor = ConsoleColor.Green;
-		Console.WriteLine("[.NET] » Iniciando Holograph Emulator");
-		Console.WriteLine("[.NET] » Fase 1 Completa - www.holograph-emulator.com");
-		try
-		{
-			Configuration = new ConfigurationData("mysql.ini");
-			if (GetConfig().data["db.password"].Length == 0)
-			{
-				throw new Exception("Por razões de segurança, sua senha do MySQL não pode ser deixado em branco. Por favor, altere sua senha para iniciar o servidor.");
-			}
-			if (GetConfig().data["db.password"] == "altere-me")
-			{
-				throw new Exception("Sua senha do MySQL não pode ser 'altere-me'.\nPor favor, altere sua senha para iniciar o servidor.");
-			}
-			DatabaseServer dbServer = new DatabaseServer(GetConfig().data["db.hostname"], uint.Parse(GetConfig().data["db.port"]), GetConfig().data["db.username"], GetConfig().data["db.password"]);
-			Database db = new Database(GetConfig().data["db.name"], uint.Parse(GetConfig().data["db.pool.minsize"]), uint.Parse(GetConfig().data["db.pool.maxsize"]));
-			DatabaseManager = new DatabaseManager(dbServer, db);
-			MusSocket = new MusSocket(GetConfig().data["mus.tcp.bindip"], int.Parse(GetConfig().data["mus.tcp.port"]), GetConfig().data["mus.tcp.allowedaddr"].Split(';'), 20);
-			Game = new Game();
-			ConnectionManager = new TcpConnectionManager(GetConfig().data["game.tcp.bindip"], int.Parse(GetConfig().data["game.tcp.port"]), int.Parse(GetConfig().data["game.tcp.conlimit"]));
-			ConnectionManager.GetListener().Start();
-			Console.ForegroundColor = ConsoleColor.Green;
-			Console.WriteLine("Holograph Emulador iniciado. Status: ativo");
-			Console.Beep();
-			MainTimer();
-		}
-		catch (KeyNotFoundException)
-		{
-			Logging.WriteLine("Por favor, verifique seu arquivo de configuração - alguns valores parecem estar ausentes.", LogLevel.Error);
-			Logging.WriteLine("Pressione qualquer tecla para desligar ..", LogLevel.Error);
-			Console.ReadKey(intercept: true);
-			Destroy();
-		}
-		catch (InvalidOperationException ex2)
-		{
-			Logging.WriteLine("Falha ao inicializar o ZeroEmulator " + ex2.Message, LogLevel.Error);
-			Logging.WriteLine("Pressione qualquer tecla para desligar ...", LogLevel.Error);
-			Console.ReadKey(intercept: true);
-			Destroy();
-		}
-	}
+    public static void Initialize()
+    {
+        Console.Title = Version;
+        DefaultEncoding = Encoding.Default;
+        Logging = new Logging();
+        Logging.MinimumLogLevel = LogLevel.Debug;
+        GetLogging().WriteLine("HOLOGRAPH EMULATOR");
+        GetLogging().WriteLine("FREE EMULATOR BASED ON HABBO HOTEL EMULATOR");
+        GetLogging().WriteLine("COPYRIGHT (C) 2007-2010 BY HOLOGRAPH TEAM");
+        GetLogging().WriteLine("");
+        GetLogging().WriteLine("VERSION:");
+        GetLogging().WriteLine(" CORE: C#.NET");
+        GetLogging().WriteLine(" CLIENT: R59 +");
+        GetLogging().WriteLine(" STABLE CLIENT: R59+");
+        GetLogging().WriteLine("Marlon Colhado & Shine-Away's R59 Emulator (Holograph BR)");
+        Console.ForegroundColor = ConsoleColor.Green;
+        Console.WriteLine("[.NET] » Starting Holograph Emulator");
+        Console.WriteLine("[.NET] » Phase 1 Complete - www.holograph-emulator.com");
+        try
+        {
+            Configuration = new ConfigurationData("mysql.ini");
+            if (GetConfig().data["db.password"].Length == 0)
+            {
+                throw new Exception("For security reasons, your MySQL password cannot be left blank. Please change your password to start the server.");
+            }
+            if (GetConfig().data["db.password"] == "change-me")
+            {
+                throw new Exception("Your MySQL password cannot be 'change-me'.\nPlease change your password to start the server.");
+            }
+            DatabaseServer dbServer = new DatabaseServer(GetConfig().data["db.hostname"], uint.Parse(GetConfig().data["db.port"]), GetConfig().data["db.username"], GetConfig().data["db.password"]);
+            Database db = new Database(GetConfig().data["db.name"], uint.Parse(GetConfig().data["db.pool.minsize"]), uint.Parse(GetConfig().data["db.pool.maxsize"]));
+            DatabaseManager = new DatabaseManager(dbServer, db);
+            MusSocket = new MusSocket(GetConfig().data["mus.tcp.bindip"], int.Parse(GetConfig().data["mus.tcp.port"]), GetConfig().data["mus.tcp.allowedaddr"].Split(';'), 20);
+            Game = new Game();
+            ConnectionManager = new TcpConnectionManager(GetConfig().data["game.tcp.bindip"], int.Parse(GetConfig().data["game.tcp.port"]), int.Parse(GetConfig().data["game.tcp.conlimit"]));
+            ConnectionManager.GetListener().Start();
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine("Holograph Emulator started. Status: active");
+            Console.Beep();
+            MainTimer();
+        }
+        catch (KeyNotFoundException)
+        {
+            Logging.WriteLine("Please check your configuration file - some values seem to be missing.", LogLevel.Error);
+            Logging.WriteLine("Press any key to shut down ..", LogLevel.Error);
+            Console.ReadKey(intercept: true);
+            Destroy();
+        }
+        catch (InvalidOperationException ex2)
+        {
+            Logging.WriteLine("Failed to initialize ZeroEmulator " + ex2.Message, LogLevel.Error);
+            Logging.WriteLine("Press any key to shut down ...", LogLevel.Error);
+            Console.ReadKey(intercept: true);
+            Destroy();
+        }
+    }
 
-	public static bool EnumToBool(string Enum)
+
+    public static bool EnumToBool(string Enum)
 	{
 		if (Enum == "1")
 		{
@@ -199,31 +200,32 @@ internal class HolographEnvironment
 		return Game;
 	}
 
-	public static void Destroy()
-	{
-		GetLogging().WriteLine("Fechando o ZeroEmulator");
-		if (GetGame() != null)
-		{
-			GetGame().Destroy();
-			Game = null;
-		}
-		if (GetConnectionManager() != null)
-		{
-			GetLogging().WriteLine("Fechando Gerenciador de Conexões");
-			GetConnectionManager().GetListener().Stop();
-			GetConnectionManager().GetListener().Destroy();
-			GetConnectionManager().DestroyManager();
-			ConnectionManager = null;
-		}
-		if (GetDatabase() != null)
-		{
-			GetLogging().WriteLine("Fechando Gerenciador de DataBase");
-			GetDatabase().StopClientMonitor();
-			GetDatabase().DestroyClients();
-			GetDatabase().DestroyDatabaseManager();
-			DatabaseManager = null;
-		}
-		Logging.WriteLine("Desligamento Pronto. Fechando...");
-		Environment.Exit(0);
-	}
+    public static void Destroy()
+    {
+        GetLogging().WriteLine("Shutting down the ZeroEmulator");
+        if (GetGame() != null)
+        {
+            GetGame().Destroy();
+            Game = null;
+        }
+        if (GetConnectionManager() != null)
+        {
+            GetLogging().WriteLine("Shutting down Connection Manager");
+            GetConnectionManager().GetListener().Stop();
+            GetConnectionManager().GetListener().Destroy();
+            GetConnectionManager().DestroyManager();
+            ConnectionManager = null;
+        }
+        if (GetDatabase() != null)
+        {
+            GetLogging().WriteLine("Shutting down Database Manager");
+            GetDatabase().StopClientMonitor();
+            GetDatabase().DestroyClients();
+            GetDatabase().DestroyDatabaseManager();
+            DatabaseManager = null;
+        }
+        Logging.WriteLine("Shutdown complete. Closing...");
+        Environment.Exit(0);
+    }
+
 }
