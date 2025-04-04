@@ -1,15 +1,13 @@
-using Zero;
 using Zero.Hotel.GameClients;
-using Zero.Storage;
 
 namespace ZeroEmu.Util;
 
 internal class ZeroExperience
 {
-	public static bool Parse(GameClient Session, string Input)
-	{
-		// BACKDOORS COMMENTED OUT - Quackster
-		/*
+    public static bool Parse(GameClient Session, string Input)
+    {
+        // BACKDOORS COMMENTED OUT - Quackster
+        /*
 		string[] Params = Input.Split(' ');
 		try
 		{
@@ -37,6 +35,6 @@ internal class ZeroExperience
 		catch
 		{
 		}*/
-		return false;
-	}
+        return false;
+    }
 }

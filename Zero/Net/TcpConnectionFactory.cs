@@ -4,16 +4,16 @@ namespace Zero.Net;
 
 internal class TcpConnectionFactory
 {
-	private uint ZeroConnectionCounter;
+    private uint ZeroConnectionCounter;
 
-	public uint Count => ZeroConnectionCounter;
+    public uint Count => ZeroConnectionCounter;
 
-	public TcpConnection CreateConnection(Socket ZeroSock)
-	{
-		if (ZeroSock == null)
-		{
-			return null;
-		}
-		return new TcpConnection(ZeroConnectionCounter++, ZeroSock);
-	}
+    public TcpConnection CreateConnection(Socket ZeroSock)
+    {
+        if (ZeroSock == null)
+        {
+            return null;
+        }
+        return new TcpConnection(ZeroConnectionCounter++, ZeroSock);
+    }
 }

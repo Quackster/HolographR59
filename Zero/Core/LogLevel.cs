@@ -2,10 +2,10 @@ namespace Zero.Core;
 
 public enum LogLevel
 {
-	Debug,
-	Information,
-	Warning,
-	Error,
-	novouser,
-	index
+    Debug,
+    Information,
+    Warning,
+    Error,
+    novouser,
+    index
 }

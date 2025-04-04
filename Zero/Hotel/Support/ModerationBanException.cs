@@ -4,8 +4,8 @@ namespace Zero.Hotel.Support;
 
 public class ModerationBanException : Exception
 {
-	public ModerationBanException(string Reason)
-		: base(Reason)
-	{
-	}
+    public ModerationBanException(string Reason)
+        : base(Reason)
+    {
+    }
 }
