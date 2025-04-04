@@ -1,6 +1,15 @@
 **What is this?**
 
-A 'renamed' fork of Uber Emulator that powers the Habbo Hotel R59 client
+A 'renamed' fork of Uber Emulator that powers the Habbo Hotel R59 client. I have decompiled this source code and fixed it up.
+
+
+
+*My changes include...*
+
+- ...removing the backdoors in [this](https://github.com/Quackster/HolographR59/commit/aaad0841494b36768b553260402c6b76421ea292) commit.
+- ...moved it from .NET Framework 4 to .NET 8 (multi-OS support!).
+- ...fixed the references to stockimp.dll and MySql.Data.dll
+- ...translating the start up to English
 
 Original thread ([archive link](https://web.archive.org/web/20250404004638/https://forum.ragezone.com/threads/pack-habbo-beta-v54-mobis-editor-by-atheros.1207232/)): https://forum.ragezone.com/threads/pack-habbo-beta-v54-mobis-editor-by-atheros.1207232/
 
@@ -12,7 +21,7 @@ Blogspot post ([archive link](https://web.archive.org/web/20250404004600/https:/
 **Download:**
 - [This includes the DB, CMS, SWFs, etc.](https://h4bbo.net/archive/Habbo%20Archives/Flash/PACK%20HABBO%20BETA%20RETRO%20V54.rar) 
 
-*Do not use the compiled emulator in this download, use the source code from* **this repository** *as the compiled version is outdated and contains security flaws*
+*Do not use the compiled emulator in this download link above, use the source code from* **this repository** *as the compiled version is outdated and contains security flaws*.
 
 **Screenshots:** 
 
