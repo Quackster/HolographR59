@@ -12,13 +12,12 @@
   <PropertyGroup>
     <ApplicationIcon>app.ico</ApplicationIcon>
   </PropertyGroup>
-  <ItemGroup />
   <ItemGroup>
-    <Reference Include="MySql.Data">
-      <HintPath>..\compiled\MySql.Data.dll</HintPath>
-    </Reference>
+    <PackageReference Include="MySql.Data" Version="9.2.0" />
+  </ItemGroup>
+  <ItemGroup>
     <Reference Include="slockimp">
-      <HintPath>..\compiled\slockimp.dll</HintPath>
+      <HintPath>References\slockimp.dll</HintPath>
     </Reference>
   </ItemGroup>
 </Project>
