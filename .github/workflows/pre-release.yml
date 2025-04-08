@@ -29,7 +29,7 @@ jobs:
       
       # Publish Linux 64-bit executable
       - name: Build Linux 64-bit
-        run: dotnet publish -c Release -r linux-x64 --output linux-x64 HolographEmulator.sln --self-contained false
+        run: dotnet publish -c Release -r linux-x64 --output linux-x64 -p:PublishSingleFile=true -p:PublishTrimmed=true HolographEmulator.sln --self-contained false
           
       - name: File release preparation
         run: |
@@ -46,7 +46,7 @@ jobs:
             
       # Publish Windows 64-bit executable
       - name: Build Windows 64-bit
-        run: dotnet publish -c Release -r win-x64 --output win-x64 HolographEmulator.sln --self-contained false
+        run: dotnet publish -c Release -r win-x64 --output win-x64 -p:PublishSingleFile=true -p:PublishTrimmed=true HolographEmulator.sln --self-contained false
           
       - name: File release preparation
         run: |
