@@ -21,8 +21,8 @@ The latest builds for Linux and Windows are found on the [latest](https://github
 
 | OS | Download |
 |---|---|
-| Linux (64-bit) | [HolographR59-linux-x64.zip](https://github.com/Quackster/HolographR59/releases/download/latest/HolographR59-linux-x64.zip) |
-| Windows (64-bit) | [HolographR59-win-x64.zip](https://github.com/Quackster/HolographR59/releases/download/latest/HolographR59-win-x64.zip) |
+| Linux (64-bit) | [HolographR59-linux-x64.zip](https://github.com/Quackster/HolographR59/releases/download/latest/HolographEmulator-linux-x64.zip) |
+| Windows (64-bit) | [HolographR59-win-x64.zip](https://github.com/Quackster/HolographR59/releases/download/latest/HolographEmulator-win-x64.zip) |
 
 **Requirements:**
 - .NET 8 ([download](https://dotnet.microsoft.com/en-us/download/dotnet/8.0))
