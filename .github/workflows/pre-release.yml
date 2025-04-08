@@ -37,7 +37,7 @@ jobs:
           
       - name: File release preparation
         run: |
-          sudo cp SQL/DB.sql linux-x64
+          sudo cp SQL/database.sql linux-x64
         
       - name: Compress release files
         uses: montudor/action-zip@v1
@@ -54,7 +54,7 @@ jobs:
           
       - name: File release preparation
         run: |
-          sudo cp SQL/DB.sql win-x64
+          sudo cp SQL/database.sql win-x64
 
       - name: Compress release files
         uses: montudor/action-zip@v1
