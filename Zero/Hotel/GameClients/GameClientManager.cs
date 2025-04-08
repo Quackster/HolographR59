@@ -76,11 +76,11 @@ internal class GameClientManager
                     if (oldBalance < 3000)
                     {
                         Client.GetHabbo().UpdateCreditsBalance(InDatabase: false);
-                        Client.SendNotif("Atualização de Créditos" + Convert.ToChar(13) + "-----------------------------------" + Convert.ToChar(13) + "Acabamos de encher os seus créditos até 3000 - divirta-se! A atualização de créditos próxima ocorrerá em três horas.");
+                        Client.SendNotif("Credits Update" + Convert.ToChar(13) + "-----------------------------------" + Convert.ToChar(13) + "We’ve just topped up your credits to 3000 - enjoy! The next credit update will occur in three hours.");
                     }
                     else if (oldBalance >= 3000)
                     {
-                        Client.SendNotif("Atualização de Créditos" + Convert.ToChar(13) + "-----------------------------------" + Convert.ToChar(13) + "Desculpe! Porque o seu saldo é de 3000 ou superior, mas não temos encher os seus créditos. A atualização de créditos próxima ocorrerá em três horas.");
+                        Client.SendNotif("Credits Update" + Convert.ToChar(13) + "-----------------------------------" + Convert.ToChar(13) + "Sorry! Since your balance is 3000 or higher, we haven't topped up your credits. The next credit update will occur in three hours.");
                     }
                 }
             }

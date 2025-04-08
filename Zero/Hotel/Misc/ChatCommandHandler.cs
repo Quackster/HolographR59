@@ -65,7 +65,7 @@ internal class ChatCommandHandler
                         return true;
                     }
                     return false;
-                case "atropelar":
+                case "runover": // originally "atropelar"
                     if (Session.GetHabbo().Rank >= 4)
                     {
                         TargetRoom = HolographEnvironment.GetGame().GetRoomManager().GetRoom(Session.GetHabbo().CurrentRoomId);
@@ -81,16 +81,17 @@ internal class ChatCommandHandler
                         if (TargetRoomUser.AllowOverride)
                         {
                             TargetRoomUser.AllowOverride = false;
-                            Session.SendNotif("Modo atropelar: OFF.\r Agora você não pode mais passar por qualquer obstáculo!");
+                            Session.SendNotif("Runover mode: OFF.\r You can no longer walk through obstacles!");
                         }
                         else
                         {
                             TargetRoomUser.AllowOverride = true;
-                            Session.SendNotif("Modo atropelar: ON.\r Agora vocÊ pode passar por qualquér obstáculo!");
+                            Session.SendNotif("Runover mode: ON.\r You can now walk through any obstacle!");
                         }
                         return true;
                     }
                     return false;
+
                 case "drink":
                     if (Session.GetHabbo().HasFuse("fuse_admin"))
                     {
@@ -114,20 +115,23 @@ internal class ChatCommandHandler
                         return true;
                     }
                     return false;
+
                 case "cls":
                     if (Session.GetHabbo().Rank >= 4)
                     {
                         HolographEnvironment.GetLogging().Clear();
                     }
                     break;
-                case "loadintens":
+
+                case "loaditems": // likely a typo for "loaditems"
                     if (Session.GetHabbo().Rank >= 4)
                     {
                         HolographEnvironment.GetGame().GetItemManager().LoadItems();
-                        Session.SendNotif("Items atualizados.");
+                        Session.SendNotif("Items updated.");
                         return true;
                     }
                     return false;
+
                 case "pickall":
                     TargetRoom = HolographEnvironment.GetGame().GetRoomManager().GetRoom(Session.GetHabbo().CurrentRoomId);
                     if (TargetRoom != null && TargetRoom.CheckRights(Session, RequireOwnership: true))
@@ -146,14 +150,17 @@ internal class ChatCommandHandler
                         return true;
                     }
                     return false;
+
                 case "hlp":
-                    Session.SendNotif("Bem-Vindo ao  \r\r Os Comandos Para Usuários São:\r\r :dormir (Fecha os olhos de seu habbo) \r\r :nadar > desbloqueia o Efeito de nadar \r\r :limpar > Limpa seu inventário/mão \r\r :pickall > pegar todos os mobis do quarto ");
+                    Session.SendNotif("Welcome to the server! \r\r Available User Commands:\r\r :sleep (Closes your Habbo's eyes) \r\r :swim > Unlocks the swim effect \r\r :clear > Clears your inventory/hand \r\r :pickall > Pick up all room furniture");
                     return true;
+
                 case "swim":
-                case "nadar":
+                case "nadar": // "nadar" = "swim"
                     Session.GetHabbo().GetAvatarEffectsInventoryComponent().AddEffect(30, 360000);
-                    Session.SendNotif("Você desbloqueou o efeito para nadar! Entre em Efeitos, e use :D");
+                    Session.SendNotif("You unlocked the swim effect! Go to Effects and use it :D");
                     return true;
+
                 case "tin":
                     {
                         using (DatabaseClient dbClient = HolographEnvironment.GetDatabase().GetClient())
@@ -171,51 +178,54 @@ internal class ChatCommandHandler
                         return true;
                     }
                 case "empty":
-                case "limpa":
-                case "limpar":
+                case "clean":
+                case "clear":
                     Session.GetHabbo().GetInventoryComponent().ClearItems();
-                    Session.SendNotif("Sua Mão Está Limpa! :D");
+                    Session.SendNotif("Your hand is now clean! :D");
                     return true;
-                case "pesquisa":
+
+                case "survey": // originally "pesquisa"
                     if (Session.GetHabbo().HasFuse("fuse_admin"))
                     {
                         ServerMessage Message = new ServerMessage(79u);
-                        Message.AppendStringWithBreak("Qual melhor lugar para evento? ");
+                        Message.AppendStringWithBreak("What's the best place for an event?");
                         Message.AppendInt32(5);
                         Message.AppendInt32(133333);
-                        Message.AppendStringWithBreak("Teatro");
+                        Message.AppendStringWithBreak("Theater");
                         Message.AppendInt32(2);
-                        Message.AppendStringWithBreak("Biblioteca");
+                        Message.AppendStringWithBreak("Library");
                         Message.AppendInt32(3);
-                        Message.AppendStringWithBreak("Quarto do gerente");
+                        Message.AppendStringWithBreak("Manager's room");
                         Message.AppendInt32(4);
-                        Message.AppendStringWithBreak("Qualquer um");
+                        Message.AppendStringWithBreak("Anywhere");
                         Message.AppendInt32(5);
-                        Message.AppendStringWithBreak("Não quero opnar");
+                        Message.AppendStringWithBreak("I don't want to vote");
                         Session.GetHabbo().CurrentRoom.SendMessage(Message);
                         return true;
                     }
                     break;
+
                 case "tv":
                     if (Session.GetHabbo().HasFuse("fuse_admin"))
                     {
                         if (Session.GetHabbo().SpectatorMode)
                         {
                             Session.GetHabbo().SpectatorMode = false;
-                            Session.SendNotif("Entre novamende no quarto, Modo HabboTV: OFF");
+                            Session.SendNotif("Re-enter the room, HabboTV Mode: OFF");
                         }
                         else
                         {
                             Session.GetHabbo().SpectatorMode = true;
-                            Session.SendNotif("Entre novamente no quarto, Modo HabboTV: ON");
+                            Session.SendNotif("Re-enter the room, HabboTV Mode: ON");
                         }
                         return true;
                     }
                     return false;
+
                 case "bots":
                     if (Session.GetHabbo().Rank < 4)
                     {
-                        Session.SendNotif("Você Não pode usar esse comando!");
+                        Session.SendNotif("You can't use this command!");
                     }
                     if (Session.GetHabbo().Rank >= 6)
                     {
@@ -223,78 +233,103 @@ internal class ChatCommandHandler
                         return true;
                     }
                     return false;
+
                 case "hotelalert":
-                case "alerta":
                 case "ha":
                     if (Session.GetHabbo().Rank < 4)
                     {
-                        Session.SendNotif("Você Não pode usar esse comando!");
+                        Session.SendNotif("You can't use this command!");
                     }
                     if (Session.GetHabbo().Rank >= 4)
                     {
-                        string Alerta = Input.Substring(2);
+                        string alert = Input.Substring(2);
                         ServerMessage HotelAlert = new ServerMessage(139u);
-                        HotelAlert.AppendStringWithBreak("Mensagem da Gerencia:\r\n" + Alerta + "\r\n Enviada por: " + Session.GetHabbo().Username);
+                        HotelAlert.AppendStringWithBreak("Message from Management:\r\n" + alert + "\r\n Sent by: " + Session.GetHabbo().Username);
                         HolographEnvironment.GetGame().GetClientManager().BroadcastMessage(HotelAlert);
                     }
                     return false;
-                case "fecharhotel":
+
+                case "shutdownhotel": // originally "fecharhotel"
                     if (Session.GetHabbo().Rank == 7)
                     {
-                        Session.SendNotif("Hotel Fechado, Reabriremos em Breve!");
+                        Session.SendNotif("Hotel closed, we will reopen soon!");
                         HolographEnvironment.Destroy();
                         return true;
                     }
                     return false;
+
                 case "pet":
                     if (Session.GetHabbo().Rank >= 4)
                     {
-                        string PetName = Params[1];
-                        string EditOption = Params[2];
-                        string Dato = Params[3];
-                        string Option = null;
+                        string petName = Params[1];
+                        string editOption = Params[2];
+                        string value = Params[3];
+                        string option = null;
                         using DatabaseClient dbClient = HolographEnvironment.GetDatabase().GetClient();
-                        if (Dato.Length < 5)
+                        if (value.Length < 5)
                         {
-                            switch (EditOption)
+                            switch (editOption)
                             {
-                                case "experiencia":
-                                    Option = "expirience";
+                                case "experience":
+                                    option = "expirience";
                                     break;
-                                case "carinho":
-                                    Option = "respect";
+                                case "affection":
+                                    option = "respect";
                                     break;
-                                case "energia":
-                                    Option = "energy";
+                                case "energy":
+                                    option = "energy";
                                     break;
-                                case "nome":
-                                    Option = "name";
+                                case "name":
+                                    option = "name";
                                     break;
                             }
-                            int getPropiedad = dbClient.ReadInt32("SELECT " + Option + " FROM user_pets WHERE name = '" + PetName + "'");
-                            int valortotal = getPropiedad + Convert.ToInt32(Dato);
-                            if (getPropiedad < 20000 && valortotal < 20000)
+                            int currentValue = dbClient.ReadInt32("SELECT " + option + " FROM user_pets WHERE name = '" + petName + "'");
+                            int totalValue = currentValue + Convert.ToInt32(value);
+                            if (currentValue < 20000 && totalValue < 20000)
                             {
-                                dbClient.ExecuteQuery("Update user_pets SET " + Option + " = '" + valortotal + "' where name = '" + PetName + "'");
+                                dbClient.ExecuteQuery("UPDATE user_pets SET " + option + " = '" + totalValue + "' WHERE name = '" + petName + "'");
                                 return true;
                             }
                         }
                     }
                     return false;
-                case "comandos":
+
                 case "commands":
                 case "help":
-                case "detas":
+                case "details":
                 case "ajuda":
                     if (Session.GetHabbo().Rank <= 4)
                     {
-                        Session.SendNotif("Esse Comando é só para Staffs do " + HolographEnvironment.GetConfig().data["Zero.htlnome"]);
+                        Session.SendNotif("This command is for the staff of " + HolographEnvironment.GetConfig().data["Zero.htlnome"]);
                     }
                     if (Session.GetHabbo().Rank >= 4)
                     {
-                        Session.SendNotif("Você Está Usando o ZeroEmulator, \r\r \r\r Esses São os Comandos para Administração \r\r :pickall (Pegue tudo no seu quarto para a sua mão! \r\r :bustest \r\r :ha <Mensagem> (Alertar o Hotel) \r\r :ban <usuario> (bane por pouco Tempo) \r\r :superban <usuario> (bane por Muito Tempo)\r\r  :roomkick <Usuario>\r\r  :roomalert <mensagem>\r\r  :mudo \r\r :naomudo \r\r :alert \r\r :T (mostra suas Coordenadas) \r\r :credits <usuario> <Quantidade>  \r\r :onlines (Mostra lista de usuários online)\r\r :emblema <user> <emblema_id> (Da emblema a um usuário/Para o emblema aparecer é necessário relogar)\r\r  :pixels <user> <quantidade> (Da pixels a um usuário)\r\r  :atropelar (Permite que você passe por qualquér mobi ou pessoa)\r\r  :dormir (Fecha os olhos de seu habbo)\r\r :rcat (Atualiza as paginas do catalogo)\r\r  :cls (Limpa cache do console)\r\r  :chat (Limpa os ChatLogs)\r\r  :bots (Atualiza os Bots)\r\rCriado por: Gabriel Nunes");
+                        Session.SendNotif("You're using ZeroEmulator,\r\r These are admin commands:\r\r"
+                        + ":pickall (Pick up all room furniture to your hand)\r\r"
+                        + ":bustest\r\r"
+                        + ":ha <Message> (Hotel alert)\r\r"
+                        + ":ban <user> (temporary ban)\r\r"
+                        + ":superban <user> (long-term ban)\r\r"
+                        + ":roomkick <User>\r\r"
+                        + ":roomalert <message>\r\r"
+                        + ":mute\r\r"
+                        + ":unmute\r\r"
+                        + ":alert\r\r"
+                        + ":T (show coordinates)\r\r"
+                        + ":credits <user> <amount>\r\r"
+                        + ":onlines (show list of online users)\r\r"
+                        + ":badge <user> <badge_id> (give badge — user must relog)\r\r"
+                        + ":pixels <user> <amount> (give pixels)\r\r"
+                        + ":runover (Walk through furniture/people)\r\r"
+                        + ":sleep (Close Habbo's eyes)\r\r"
+                        + ":rcat (Refresh catalog pages)\r\r"
+                        + ":cls (Clear console cache)\r\r"
+                        + ":chat (Clear chat logs)\r\r"
+                        + ":bots (Refresh bots)\r\r"
+                        + "Created by: Gabriel Nunes");
                     }
                     return true;
+
                 case "pixel":
                 case "pixels":
                     if (Session.GetHabbo().Rank >= 4)
@@ -304,30 +339,31 @@ internal class ChatCommandHandler
                         {
                             if (int.TryParse(Params[2], out var creditsToAdd))
                             {
-                                TargetClient.GetHabbo().ActivityPoints = TargetClient.GetHabbo().ActivityPoints + creditsToAdd;
+                                TargetClient.GetHabbo().ActivityPoints += creditsToAdd;
                                 TargetClient.GetHabbo().UpdateActivityPointsBalance(InDatabase: true);
-                                TargetClient.SendNotif(Session.GetHabbo().Username + " foram creditados " + creditsToAdd + " Pixels em sua conta!");
-                                Session.SendNotif("Pixels modificados com sucesso.");
+                                TargetClient.SendNotif(Session.GetHabbo().Username + " has credited " + creditsToAdd + " Pixels to your account!");
+                                Session.SendNotif("Pixels successfully updated.");
                                 return true;
                             }
-                            Session.SendNotif("Por favor, coloque um valor válido.");
+                            Session.SendNotif("Please enter a valid value.");
                             return false;
                         }
-                        Session.SendNotif("Usuário não encontrado.");
+                        Session.SendNotif("User not found.");
                         return false;
                     }
                     return false;
+
                 case "onlines":
                     {
                         DataTable onlineData = new DataTable("online");
-                        string message = "Usuários online:\r";
+                        string message = "Online users:\r";
                         using (DatabaseClient dbClient = HolographEnvironment.GetDatabase().GetClient())
                         {
                             onlineData = dbClient.ReadDataTable("SELECT username FROM users WHERE online = '1';");
                         }
                         foreach (DataRow user in onlineData.Rows)
                         {
-                            message = string.Concat(message, user["username"], "\r");
+                            message += user["username"] + "\r";
                         }
                         Session.SendNotif(message);
                         return true;
@@ -336,7 +372,7 @@ internal class ChatCommandHandler
                 //case "sdserver":
                 //	HolographEnvironment.Destroy();
                 //	break;
-                case "emblema":
+                case "badge":
                     if (Session.GetHabbo().Rank >= 4)
                     {
                         TargetClient = HolographEnvironment.GetGame().GetClientManager().GetClientByHabbo(Params[1]);
@@ -345,31 +381,32 @@ internal class ChatCommandHandler
                             TargetClient.GetHabbo().GetBadgeComponent().GiveBadge(HolographEnvironment.FilterInjectionChars(Params[2]), InDatabase: true);
                             return true;
                         }
-                        Session.SendNotif("Usuário: " + Params[1] + " não foi encontrado no banco de dados.\rPor favor tente novamente.");
+                        Session.SendNotif("User: " + Params[1] + " was not found in the database.\rPlease try again.");
                         return false;
                     }
                     return false;
+
                 case "credits":
-                case "creditos":
-                case "moedas":
+                case "coins":
+                case "money":
                     if (Session.GetHabbo().Rank >= 4)
                     {
                         TargetUser = Params[1];
                         TargetClient = HolographEnvironment.GetGame().GetClientManager().GetClientByHabbo(TargetUser);
                         if (TargetClient == null)
                         {
-                            Session.SendNotif("O Usuário " + TargetUser + " não Foi Encontrado");
+                            Session.SendNotif("User " + TargetUser + " was not found");
                             return true;
                         }
-                        int creditos = 0;
-                        creditos = int.Parse(Params[2]);
-                        TargetClient.GetHabbo().Credits += creditos;
+                        int credits = int.Parse(Params[2]);
+                        TargetClient.GetHabbo().Credits += credits;
                         TargetClient.GetHabbo().UpdateCreditsBalance(InDatabase: true);
-                        Session.SendNotif("Pronto! Foram creditadas " + creditos + " Moedas para: " + TargetUser + "\r\r Total: " + TargetClient.GetHabbo().Credits);
+                        Session.SendNotif("Done! " + credits + " credits have been added to: " + TargetUser + "\r\r Total: " + TargetClient.GetHabbo().Credits);
                         return true;
                     }
                     return false;
-                case "esvazia":
+
+                case "unload":
                     if (Session.GetHabbo().Rank >= 4)
                     {
                         if (uint.TryParse(Params[1], out var RoomId))
@@ -380,18 +417,19 @@ internal class ChatCommandHandler
                         return false;
                     }
                     return false;
+
                 case "ban":
                     if (Session.GetHabbo().HasFuse("fuse_ban"))
                     {
                         TargetClient = HolographEnvironment.GetGame().GetClientManager().GetClientByHabbo(Params[1]);
                         if (TargetClient == null)
                         {
-                            Session.SendNotif("Usuário não encontrado.");
+                            Session.SendNotif("User not found.");
                             return true;
                         }
                         if (TargetClient.GetHabbo().Rank >= Session.GetHabbo().Rank)
                         {
-                            Session.SendNotif("Você não tem permissão para banir o usuário.");
+                            Session.SendNotif("You do not have permission to ban this user.");
                             return true;
                         }
                         int BanTime = 0;
@@ -399,35 +437,35 @@ internal class ChatCommandHandler
                         {
                             BanTime = int.Parse(Params[2]);
                         }
-                        catch (FormatException)
-                        {
-                        }
+                        catch (FormatException) { }
                         if (BanTime <= 600)
                         {
-                            Session.SendNotif("Ban tempo é em segundos e deve ser pelo menos de 600 segundos (dez minutos). Por vezes mais específicas proibição predefinidos, usar a ferramenta mod.");
+                            Session.SendNotif("Ban time is in seconds and must be at least 600 seconds (ten minutes). For more specific pre-defined bans, use the mod tool.");
                         }
                         HolographEnvironment.GetGame().GetBanManager().BanUser(TargetClient, Session.GetHabbo().Username, BanTime, MergeParams(Params, 3), IpBan: false);
                         return true;
                     }
                     return false;
+
                 case "superban":
                     if (Session.GetHabbo().HasFuse("fuse_superban"))
                     {
                         TargetClient = HolographEnvironment.GetGame().GetClientManager().GetClientByHabbo(Params[1]);
                         if (TargetClient == null)
                         {
-                            Session.SendNotif("Usuario não existe!");
+                            Session.SendNotif("User does not exist!");
                             return true;
                         }
                         if (TargetClient.GetHabbo().Rank >= Session.GetHabbo().Rank)
                         {
-                            Session.SendNotif("Você não tem permissão para banir o usuário.");
+                            Session.SendNotif("You do not have permission to ban this user.");
                             return true;
                         }
                         HolographEnvironment.GetGame().GetBanManager().BanUser(TargetClient, Session.GetHabbo().Username, 360000000.0, MergeParams(Params, 2), IpBan: false);
                         return true;
                     }
                     return false;
+
                 case "roomkick":
                     if (Session.GetHabbo().HasFuse("fuse_roomkick"))
                     {
@@ -448,7 +486,7 @@ internal class ChatCommandHandler
                             {
                                 if (!GenericMsg)
                                 {
-                                    RoomUser.GetClient().SendNotif("Você foi kikado por um moderador. Motivo: " + ModMsg);
+                                    RoomUser.GetClient().SendNotif("You were kicked by a moderator. Reason: " + ModMsg);
                                 }
                                 TargetRoom.RemoveUserFromRoom(RoomUser.GetClient(), NotifyClient: true, GenericMsg);
                             }
@@ -456,8 +494,9 @@ internal class ChatCommandHandler
                         return true;
                     }
                     return false;
-                case "alertquarto":
+
                 case "roomalert":
+                case "roommessage":
                     if (Session.GetHabbo().HasFuse("fuse_roomalert"))
                     {
                         TargetRoom = HolographEnvironment.GetGame().GetRoomManager().GetRoom(Session.GetHabbo().CurrentRoomId);
@@ -473,44 +512,47 @@ internal class ChatCommandHandler
                         return true;
                     }
                     return false;
-                case "mudo":
+
+                case "mute":
                     if (Session.GetHabbo().HasFuse("fuse_mute"))
                     {
                         TargetUser = Params[1];
                         TargetClient = HolographEnvironment.GetGame().GetClientManager().GetClientByHabbo(TargetUser);
                         if (TargetClient == null || TargetClient.GetHabbo() == null)
                         {
-                            Session.SendNotif("Não foi possível encontrar o usuário: " + TargetUser);
+                            Session.SendNotif("Could not find user: " + TargetUser);
                             return true;
                         }
                         if (TargetClient.GetHabbo().Rank >= Session.GetHabbo().Rank)
                         {
-                            Session.SendNotif("Você não tem permissão para (des)mudo de usuário.");
+                            Session.SendNotif("You do not have permission to mute/unmute this user.");
                             return true;
                         }
                         TargetClient.GetHabbo().Mute();
                         return true;
                     }
                     return false;
-                case "naomudo":
+
+                case "unmute":
                     if (Session.GetHabbo().HasFuse("fuse_mute"))
                     {
                         TargetUser = Params[1];
                         TargetClient = HolographEnvironment.GetGame().GetClientManager().GetClientByHabbo(TargetUser);
                         if (TargetClient == null || TargetClient.GetHabbo() == null)
                         {
-                            Session.SendNotif("Não foi possível encontrar o usuário: " + TargetUser);
+                            Session.SendNotif("Could not find user: " + TargetUser);
                             return true;
                         }
                         if (TargetClient.GetHabbo().Rank >= Session.GetHabbo().Rank)
                         {
-                            Session.SendNotif("Você não tem permissão para (des)mudo de usuário.");
+                            Session.SendNotif("You do not have permission to mute/unmute this user.");
                             return true;
                         }
                         TargetClient.GetHabbo().Unmute();
                         return true;
                     }
                     return false;
+
                 case "alert":
                     if (Session.GetHabbo().HasFuse("fuse_alert"))
                     {
@@ -518,13 +560,14 @@ internal class ChatCommandHandler
                         TargetClient = HolographEnvironment.GetGame().GetClientManager().GetClientByHabbo(TargetUser);
                         if (TargetClient == null)
                         {
-                            Session.SendNotif("Não foi possível encontrar o usuário: " + TargetUser);
+                            Session.SendNotif("Could not find user: " + TargetUser);
                             return true;
                         }
                         TargetClient.SendNotif(MergeParams(Params, 2), Session.GetHabbo().HasFuse("fuse_admin"));
                         return true;
                     }
                     return false;
+
                 case "softkick":
                 case "kick":
                     if (Session.GetHabbo().HasFuse("fuse_kick"))
@@ -533,17 +576,17 @@ internal class ChatCommandHandler
                         TargetClient = HolographEnvironment.GetGame().GetClientManager().GetClientByHabbo(TargetUser);
                         if (TargetClient == null)
                         {
-                            Session.SendNotif("Não foi possível encontrar o usuário: " + TargetUser);
+                            Session.SendNotif("Could not find user: " + TargetUser);
                             return true;
                         }
                         if (Session.GetHabbo().Rank <= TargetClient.GetHabbo().Rank)
                         {
-                            Session.SendNotif("Você não tem permissão para kikar esse usuário.");
+                            Session.SendNotif("You do not have permission to kick this user.");
                             return true;
                         }
                         if (TargetClient.GetHabbo().CurrentRoomId < 1)
                         {
-                            Session.SendNotif("Esse usuário não está em um quarto e não pode ser kikado.");
+                            Session.SendNotif("This user is not in a room and cannot be kicked.");
                             return true;
                         }
                         TargetRoom = HolographEnvironment.GetGame().GetRoomManager().GetRoom(TargetClient.GetHabbo().CurrentRoomId);
@@ -554,11 +597,11 @@ internal class ChatCommandHandler
                         TargetRoom.RemoveUserFromRoom(TargetClient, NotifyClient: true, NotifyKick: false);
                         if (Params.Length > 2)
                         {
-                            TargetClient.SendNotif("Um moderador tem que kikou pelos seguintes motivos: " + MergeParams(Params, 2));
+                            TargetClient.SendNotif("A moderator kicked you for the following reason: " + MergeParams(Params, 2));
                         }
                         else
                         {
-                            TargetClient.SendNotif("Um moderador te kikou da sala");
+                            TargetClient.SendNotif("A moderator kicked you from the room.");
                         }
                         return true;
                     }

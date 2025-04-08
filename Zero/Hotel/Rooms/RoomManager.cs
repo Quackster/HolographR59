@@ -258,21 +258,25 @@ internal class RoomManager
     public RoomData CreateRoom(GameClient Session, string Name, string Model)
     {
         Name = HolographEnvironment.FilterInjectionChars(Name);
+
         if (!Models.ContainsKey(Model))
         {
             Session.SendNotif("Sorry, this room model has not been added yet. Try again later.");
             return null;
         }
+
         if (Models[Model].ClubOnly && !Session.GetHabbo().HasFuse("fuse_use_special_room_layouts"))
         {
-            Session.SendNotif("Só para Membros do Clube.");
+            Session.SendNotif("Club members only.");
             return null;
         }
+
         if (Name.Length < 3)
         {
-            Session.SendNotif("Nome muito pequeno para um Quarto");
+            Session.SendNotif("Room name is too short.");
             return null;
         }
+
         using (DatabaseClient dbClient = HolographEnvironment.GetDatabase().GetClient())
         {
             dbClient.AddParamWithValue("caption", Name);
@@ -280,6 +284,7 @@ internal class RoomManager
             dbClient.AddParamWithValue("username", Session.GetHabbo().Username);
             dbClient.ExecuteQuery("INSERT INTO rooms (roomtype,caption,owner,model_name) VALUES ('private',@caption,@username,@model)");
         }
+
         uint RoomId = 0u;
         using (DatabaseClient dbClient = HolographEnvironment.GetDatabase().GetClient())
         {
@@ -287,6 +292,7 @@ internal class RoomManager
             dbClient.AddParamWithValue("username", Session.GetHabbo().Username);
             RoomId = (uint)dbClient.ReadDataRow("SELECT id FROM rooms WHERE owner = @username AND caption = @caption ORDER BY id DESC")[0];
         }
+
         return GenerateRoomData(RoomId);
     }
 }

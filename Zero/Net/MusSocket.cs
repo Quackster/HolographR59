@@ -31,14 +31,14 @@ internal class MusSocket
             msSocket.Listen(backlog);
             msSocket.BeginAccept(OnEvent_NewConnection, msSocket);
             Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("[.NET] » Checando mysql.ini...");
-            Console.WriteLine("[.NET] » mysql.ini Encontrado Carregando Informações...");
+            Console.WriteLine("[.NET] » Checking mysql.ini...");
+            Console.WriteLine("[.NET] » mysql.ini Found, Loading Information...");
             Console.WriteLine("");
         }
         catch (Exception ex)
         {
             Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine("Erro 'mysql.ini' Não configurado corretamente \n" + ex.Message);
+            Console.WriteLine("Error: 'mysql.ini' not configured properly \n" + ex.Message);
         }
     }
 
