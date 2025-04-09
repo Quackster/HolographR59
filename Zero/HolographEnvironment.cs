@@ -118,7 +118,7 @@ internal class HolographEnvironment
 
     public static void MainTimer()
     {
-        Timer aTimer = new Timer();
+        var aTimer = new System.Timers.Timer();
         aTimer.Elapsed += OnTimedEvent;
         aTimer.Interval = 30000.0;
         aTimer.Enabled = true;
