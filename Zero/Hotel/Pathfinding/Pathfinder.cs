@@ -75,7 +75,7 @@ internal class Pathfinder
         }
     }
 
-    public List<Coord> FindPath()
+    public SynchronizedCollection<Coord> FindPath()
     {
         int UserX = User.X;
         int UserY = User.Y;
@@ -114,7 +114,7 @@ internal class Pathfinder
         {
             return null;
         }
-        List<Coord> Path = new List<Coord>();
+        SynchronizedCollection<Coord> Path = new SynchronizedCollection<Coord>();
         Path.Add(new Coord(User.GoalX, User.GoalY));
         do
         {

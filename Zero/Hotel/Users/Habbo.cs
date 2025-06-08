@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using Zero.Core;
@@ -56,15 +57,15 @@ internal class Habbo
 
     public uint TeleporterId;
 
-    public List<uint> FavoriteRooms;
+    public SynchronizedCollection<uint> FavoriteRooms;
 
-    public List<uint> MutedUsers;
+    public SynchronizedCollection<uint> MutedUsers;
 
-    public List<string> Tags;
+    public SynchronizedCollection<string> Tags;
 
-    public Dictionary<uint, int> Achievements;
+    public ConcurrentDictionary<uint, int> Achievements;
 
-    public List<uint> RatedRooms;
+    public SynchronizedCollection<uint> RatedRooms;
 
     private SubscriptionManager SubscriptionManager;
 
@@ -130,11 +131,11 @@ internal class Habbo
         LoadingChecksPassed = false;
         CurrentRoomId = 0u;
         this.HomeRoom = HomeRoom;
-        FavoriteRooms = new List<uint>();
-        MutedUsers = new List<uint>();
-        Tags = new List<string>();
-        Achievements = new Dictionary<uint, int>();
-        RatedRooms = new List<uint>();
+        FavoriteRooms = new SynchronizedCollection<uint>();
+        MutedUsers = new SynchronizedCollection<uint>();
+        Tags = new SynchronizedCollection<string>();
+        Achievements = new ConcurrentDictionary<uint, int>();
+        RatedRooms = new SynchronizedCollection<uint>();
         this.Respect = Respect;
         this.DailyRespectPoints = DailyRespectPoints;
         this.DailyPetRespectPoints = DailyPetRespectPoints;
@@ -151,7 +152,7 @@ internal class Habbo
         SpectatorMode = false;
         Disconnected = false;
         Console.ForegroundColor = ConsoleColor.Green;
-        Console.WriteLine(Username + " Se Conectou.", LogLevel.novouser);
+        Console.WriteLine(Username + " has connected.", LogLevel.novouser);
     }
 
     public void LoadData()
@@ -254,7 +255,7 @@ internal class Habbo
         }
         foreach (DataRow Row in Data.Rows)
         {
-            Achievements.Add((uint)Row["achievement_id"], (int)Row["achievement_level"]);
+            Achievements.TryAdd((uint)Row["achievement_id"], (int)Row["achievement_level"]);
         }
     }
 
@@ -265,7 +266,7 @@ internal class Habbo
             if (!Disconnected)
             {
                 Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine(Username + " Se Desconectou", LogLevel.Error);
+                Console.WriteLine(Username + " has disconnected.", LogLevel.Error);
                 Disconnected = true;
                 DateTime Now = DateTime.Now;
                 using (DatabaseClient dbClient = HolographEnvironment.GetDatabase().GetClient())

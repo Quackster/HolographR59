@@ -5,6 +5,7 @@ using System.Threading;
 using Zero.Hotel.Support;
 using Zero.Messages;
 using Zero.Storage;
+using System.Collections.Concurrent;
 
 namespace Zero.Hotel.GameClients;
 
@@ -12,100 +13,108 @@ internal class GameClientManager
 {
     private Thread ConnectionChecker;
 
-    private Dictionary<uint, GameClient> Clients;
+    private ConcurrentDictionary<uint, GameClient> Clients;
 
     public int ClientCount => Clients.Count;
 
     public void LogClonesOut(string Username)
     {
         List<uint> ToRemove = new List<uint>();
-        lock (Clients)
+
+        foreach (var kvp in this.Clients)
         {
-            Dictionary<uint, GameClient>.Enumerator eClients = Clients.GetEnumerator();
-            while (eClients.MoveNext())
+            GameClient Client = kvp.Value;
+
+            if (Client.GetHabbo() != null && Client.GetHabbo().Username.ToLower() == Username.ToLower())
             {
-                GameClient Client = eClients.Current.Value;
-                if (Client.GetHabbo() != null && Client.GetHabbo().Username.ToLower() == Username.ToLower())
-                {
-                    ToRemove.Add(Client.ClientId);
-                }
+                ToRemove.Add(Client.ClientId);
+                continue;
             }
         }
+
         for (int i = 0; i < ToRemove.Count; i++)
         {
-            Clients[ToRemove[i]].Disconnect();
+            this.Clients[ToRemove[i]].Disconnect();
         }
     }
 
     public string GetNameById(uint Id)
     {
         GameClient Cl = GetClientByHabbo(Id);
+
         if (Cl != null)
         {
             return Cl.GetHabbo().Username;
         }
+
         DataRow Row = null;
+
         using (DatabaseClient dbClient = HolographEnvironment.GetDatabase().GetClient())
         {
             Row = dbClient.ReadDataRow("SELECT username FROM users WHERE id = '" + Id + "' LIMIT 1");
         }
+
         if (Row == null)
         {
             return "Unknown User";
         }
+
         return (string)Row[0];
     }
 
     public void DeployHotelCreditsUpdate()
     {
-        lock (Clients)
+        foreach (var kvp in this.Clients)
         {
-            Dictionary<uint, GameClient>.Enumerator eClients = Clients.GetEnumerator();
-            while (eClients.MoveNext())
+            GameClient Client = kvp.Value;
+
+            if (Client.GetHabbo() == null)
             {
-                GameClient Client = eClients.Current.Value;
-                if (Client.GetHabbo() != null)
-                {
-                    int newCredits = 0;
-                    using (DatabaseClient dbClient = HolographEnvironment.GetDatabase().GetClient())
-                    {
-                        newCredits = (int)dbClient.ReadDataRow("SELECT credits FROM users WHERE id = '" + Client.GetHabbo().Id + "' LIMIT 1")[0];
-                    }
-                    int oldBalance = Client.GetHabbo().Credits;
-                    Client.GetHabbo().Credits = newCredits;
-                    if (oldBalance < 3000)
-                    {
-                        Client.GetHabbo().UpdateCreditsBalance(InDatabase: false);
-                        Client.SendNotif("Credits Update" + Convert.ToChar(13) + "-----------------------------------" + Convert.ToChar(13) + "We’ve just topped up your credits to 3000 - enjoy! The next credit update will occur in three hours.");
-                    }
-                    else if (oldBalance >= 3000)
-                    {
-                        Client.SendNotif("Credits Update" + Convert.ToChar(13) + "-----------------------------------" + Convert.ToChar(13) + "Sorry! Since your balance is 3000 or higher, we haven't topped up your credits. The next credit update will occur in three hours.");
-                    }
-                }
+                continue;
+            }
+
+            int newCredits = 0;
+
+            using (DatabaseClient dbClient = HolographEnvironment.GetDatabase().GetClient())
+            {
+                newCredits = (int)dbClient.ReadDataRow("SELECT credits FROM users WHERE id = '" + Client.GetHabbo().Id + "' LIMIT 1")[0];
+            }
+
+            int oldBalance = Client.GetHabbo().Credits;
+
+            Client.GetHabbo().Credits = newCredits;
+
+            if (oldBalance < 3000)
+            {
+                Client.GetHabbo().UpdateCreditsBalance(false);
+                Client.SendNotif("Uber Credits Update" + Convert.ToChar(13) + "-----------------------------------" + Convert.ToChar(13) + "We have refilled your credits up to 3000 - enjoy! The next credits update will occur in 3 hours.", "http://uber.meth0d.org/credits");
+            }
+            else if (oldBalance >= 3000)
+            {
+                Client.SendNotif("Uber Credits Update" + Convert.ToChar(13) + "-----------------------------------" + Convert.ToChar(13) + "Sorry! Because your credit balance is 3000 or higher, we have not refilled your credits. The next credits update will occur in 3 hours.", "http://uber.meth0d.org/credits");
             }
         }
     }
-
     public void CheckForAllBanConflicts()
     {
         Dictionary<GameClient, ModerationBanException> ConflictsFound = new Dictionary<GameClient, ModerationBanException>();
-        lock (Clients)
+
+        foreach (var kvp in this.Clients)
         {
-            Dictionary<uint, GameClient>.Enumerator eClients = Clients.GetEnumerator();
-            while (eClients.MoveNext())
+            GameClient Client = kvp.Value;
+
+            try
             {
-                GameClient Client = eClients.Current.Value;
-                try
-                {
-                    HolographEnvironment.GetGame().GetBanManager().CheckForBanConflicts(Client);
-                }
-                catch (ModerationBanException value)
-                {
-                    ConflictsFound.Add(Client, value);
-                }
+                HolographEnvironment.GetGame().GetBanManager().CheckForBanConflicts(Client);
+            }
+
+            catch (ModerationBanException e)
+            {
+                ConflictsFound.Add(Client, e);
             }
         }
+
+
         foreach (KeyValuePair<GameClient, ModerationBanException> Data in ConflictsFound)
         {
             Data.Key.SendBanMessage(Data.Value.Message);
@@ -117,36 +126,33 @@ internal class GameClientManager
     {
         try
         {
-            lock (Clients)
+            foreach (var kvp in this.Clients)
             {
-                Dictionary<uint, GameClient>.Enumerator eClients = Clients.GetEnumerator();
-                while (eClients.MoveNext())
+                GameClient Client = kvp.Value;
+
+                if (Client.GetHabbo() == null || !HolographEnvironment.GetGame().GetPixelManager().NeedsUpdate(Client))
                 {
-                    GameClient Client = eClients.Current.Value;
-                    if (Client.GetHabbo() != null && HolographEnvironment.GetGame().GetPixelManager().NeedsUpdate(Client))
-                    {
-                        HolographEnvironment.GetGame().GetPixelManager().GivePixels(Client);
-                    }
+                    continue;
                 }
+
+                HolographEnvironment.GetGame().GetPixelManager().GivePixels(Client);
             }
         }
-        catch (Exception ex)
+
+        catch (Exception e)
         {
-            HolographEnvironment.GetLogging().WriteLine("[Zero.CheckPixelUpdates]: " + ex.Message);
+            HolographEnvironment.GetLogging().WriteLine("[GCMExt.CheckPixelUpdates]: " + e.Message);
         }
     }
 
     public GameClientManager()
     {
-        Clients = new Dictionary<uint, GameClient>();
+        this.Clients = new ConcurrentDictionary<uint, GameClient>();
     }
 
     public void Clear()
     {
-        lock (Clients)
-        {
-            Clients.Clear();
-        }
+        Clients.Clear();
     }
 
     public GameClient GetClient(uint ClientId)
@@ -160,19 +166,14 @@ internal class GameClientManager
 
     public bool RemoveClient(uint ClientId)
     {
-        lock (Clients)
-        {
-            return Clients.Remove(ClientId);
-        }
+        return Clients.TryRemove(ClientId, out var _);
     }
 
     public void StartClient(uint ClientId)
     {
-        lock (Clients)
-        {
-            Clients.Add(ClientId, new GameClient(ClientId));
-            Clients[ClientId].StartConnection();
-        }
+
+        Clients.TryAdd(ClientId, new GameClient(ClientId));
+        Clients[ClientId].StartConnection();
     }
 
     public void StopClient(uint ClientId)
@@ -217,24 +218,30 @@ internal class GameClientManager
     private void TestClientConnections()
     {
         int interval = int.Parse(HolographEnvironment.GetConfig().data["client.ping.interval"]);
+
         if (interval <= 100)
         {
             throw new ArgumentException("Invalid configuration value for ping interval! Must be above 100 miliseconds.");
         }
+
         while (true)
         {
-            //bool flag = true;
-            ServerMessage PingMessage = new ServerMessage(50u);
+            ServerMessage PingMessage = new ServerMessage(50);
+
             try
             {
                 List<uint> TimedOutClients = new List<uint>();
                 List<GameClient> ToPing = new List<GameClient>();
-                lock (Clients)
+
+                /*
+                badlock (this.Clients)
                 {
-                    Dictionary<uint, GameClient>.Enumerator eClients = Clients.GetEnumerator();
+                    ConcurrentDictionary<uint, GameClient>.Enumerator eClients = this.Clients.GetEnumerator();                     
+
                     while (eClients.MoveNext())
                     {
                         GameClient Client = eClients.Current.Value;
+
                         if (Client.PongOK)
                         {
                             Client.PongOK = false;
@@ -245,62 +252,80 @@ internal class GameClientManager
                             TimedOutClients.Add(Client.ClientId);
                         }
                     }
+                }*/
+
+                foreach (var kvp in this.Clients)
+                {
+                    GameClient Client = kvp.Value;
+
+                    if (Client.PongOK)
+                    {
+                        Client.PongOK = false;
+                        ToPing.Add(Client);
+                    }
+                    else
+                    {
+                        TimedOutClients.Add(Client.ClientId);
+                    }
                 }
+
                 foreach (uint ClientId in TimedOutClients)
                 {
                     HolographEnvironment.GetGame().GetClientManager().StopClient(ClientId);
                 }
+
                 foreach (GameClient Client in ToPing)
                 {
                     try
                     {
                         Client.GetConnection().SendMessage(PingMessage);
                     }
-                    catch (Exception)
-                    {
-                    }
+                    catch (Exception) { }
                 }
+
                 Thread.Sleep(interval);
             }
-            catch (ThreadAbortException)
-            {
-            }
+            catch (ThreadAbortException) { }
         }
     }
 
     public GameClient GetClientByHabbo(uint HabboId)
     {
-        lock (Clients)
+        foreach (var kvp in this.Clients)
         {
-            Dictionary<uint, GameClient>.Enumerator eClients = Clients.GetEnumerator();
-            while (eClients.MoveNext())
+            GameClient Client = kvp.Value;
+
+            if (Client.GetHabbo() == null)
             {
-                GameClient Client = eClients.Current.Value;
-                if (Client.GetHabbo() == null || Client.GetHabbo().Id != HabboId)
-                {
-                    continue;
-                }
+                continue;
+            }
+
+            if (Client.GetHabbo().Id == HabboId)
+            {
                 return Client;
             }
         }
+
         return null;
     }
 
     public GameClient GetClientByHabbo(string Name)
     {
-        lock (Clients)
+        foreach (var kvp in this.Clients)
         {
-            Dictionary<uint, GameClient>.Enumerator eClients = Clients.GetEnumerator();
-            while (eClients.MoveNext())
+            GameClient Client = kvp.Value;
+
+            if (Client.GetHabbo() == null)
             {
-                GameClient Client = eClients.Current.Value;
-                if (Client.GetHabbo() == null || !(Client.GetHabbo().Username.ToLower() == Name.ToLower()))
-                {
-                    continue;
-                }
+                continue;
+            }
+
+            if (Client.GetHabbo().Username.ToLower() == Name.ToLower())
+            {
                 return Client;
             }
         }
+
         return null;
     }
 
@@ -309,41 +334,40 @@ internal class GameClientManager
         BroadcastMessage(Message, "");
     }
 
-    public void BroadcastMessage(ServerMessage Message, string FuseRequirement)
+    public void BroadcastMessage(ServerMessage Message, String FuseRequirement)
     {
-        lock (Clients)
+        foreach (var kvp in this.Clients)
         {
-            Dictionary<uint, GameClient>.Enumerator eClients = Clients.GetEnumerator();
-            while (eClients.MoveNext())
+            GameClient Client = kvp.Value;
+
+            try
             {
-                GameClient Client = eClients.Current.Value;
-                try
+                if (FuseRequirement.Length > 0)
                 {
-                    if (FuseRequirement.Length <= 0 || (Client.GetHabbo() != null && Client.GetHabbo().HasFuse(FuseRequirement)))
+                    if (Client.GetHabbo() == null || !Client.GetHabbo().HasFuse(FuseRequirement))
                     {
-                        Client.SendMessage(Message);
+                        continue;
                     }
                 }
-                catch (Exception)
-                {
-                }
+
+                Client.SendMessage(Message);
             }
+            catch (Exception) { }
         }
     }
 
     public void CheckEffects()
     {
-        lock (Clients)
+        foreach (var kvp in this.Clients)
         {
-            Dictionary<uint, GameClient>.Enumerator eClients = Clients.GetEnumerator();
-            while (eClients.MoveNext())
+            GameClient Client = kvp.Value;
+
+            if (Client.GetHabbo() == null || Client.GetHabbo().GetAvatarEffectsInventoryComponent() == null)
             {
-                GameClient Client = eClients.Current.Value;
-                if (Client.GetHabbo() != null && Client.GetHabbo().GetAvatarEffectsInventoryComponent() != null)
-                {
-                    Client.GetHabbo().GetAvatarEffectsInventoryComponent().CheckExpired();
-                }
+                continue;
             }
+
+            Client.GetHabbo().GetAvatarEffectsInventoryComponent().CheckExpired();
         }
     }
 }

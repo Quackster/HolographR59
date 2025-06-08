@@ -12,7 +12,7 @@ internal class MoodlightData
 
     public int CurrentPreset;
 
-    public List<MoodlightPreset> Presets;
+    public SynchronizedCollection<MoodlightPreset> Presets;
 
     public uint ItemId;
 
@@ -30,7 +30,7 @@ internal class MoodlightData
         }
         Enabled = HolographEnvironment.EnumToBool(Row["enabled"].ToString());
         CurrentPreset = (int)Row["current_preset"];
-        Presets = new List<MoodlightPreset>();
+        this.Presets = new SynchronizedCollection<MoodlightPreset>();
         Presets.Add(GeneratePreset((string)Row["preset_one"]));
         Presets.Add(GeneratePreset((string)Row["preset_two"]));
         Presets.Add(GeneratePreset((string)Row["preset_three"]));

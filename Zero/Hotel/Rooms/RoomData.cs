@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using Zero.Messages;
@@ -32,7 +33,7 @@ internal class RoomData
 
     public int Score;
 
-    public List<string> Tags;
+    public SynchronizedCollection<string> Tags;
 
     public bool AllowPets;
 
@@ -73,27 +74,26 @@ internal class RoomData
     public void FillNull(uint Id)
     {
         this.Id = Id;
-        Name = "Unknown Room";
-        Description = "-";
-        Type = "private";
-        Owner = "-";
-        Category = 0;
-        UsersNow = 0;
-        UsersMax = 0;
-        ModelName = "NO_MODEL";
-        CCTs = "";
-        Score = 0;
-        Tags = new List<string>();
-        AllowPets = true;
-        AllowPetsEating = false;
-        AllowWalkthrough = true;
-        Hidewall = false;
-        Password = "";
-        Wallpaper = "0.0";
-        Floor = "0.0";
-        Landscape = "0.0";
-        Event = null;
-        myIcon = new RoomIcon(1, 1, new Dictionary<int, int>());
+        this.Name = "Unknown Room";
+        this.Description = "-";
+        this.Type = "private";
+        this.Owner = "-";
+        this.Category = 0;
+        this.UsersNow = 0;
+        this.UsersMax = 0;
+        this.ModelName = "NO_MODEL";
+        this.CCTs = "";
+        this.Score = 0;
+        this.Tags = new SynchronizedCollection<string>();
+        this.AllowPets = true;
+        this.AllowPetsEating = false;
+        this.AllowWalkthrough = true;
+        this.Password = "";
+        this.Wallpaper = "0.0";
+        this.Floor = "0.0";
+        this.Landscape = "0.0";
+        this.Event = null;
+        this.myIcon = new RoomIcon(1, 1, new ConcurrentDictionary<int, int>());
     }
 
     public void Fill(DataRow Row)
@@ -121,7 +121,7 @@ internal class RoomData
         ModelName = (string)Row["model_name"];
         CCTs = (string)Row["public_ccts"];
         Score = (int)Row["score"];
-        Tags = new List<string>();
+        Tags = new SynchronizedCollection<string>();
         AllowPets = HolographEnvironment.EnumToBool(Row["allow_pets"].ToString());
         AllowPetsEating = HolographEnvironment.EnumToBool(Row["allow_pets_eat"].ToString());
         AllowWalkthrough = HolographEnvironment.EnumToBool(Row["allow_walkthrough"].ToString());
@@ -131,14 +131,14 @@ internal class RoomData
         Floor = (string)Row["floor"];
         Landscape = (string)Row["landscape"];
         Event = null;
-        Dictionary<int, int> IconItems = new Dictionary<int, int>();
+        ConcurrentDictionary<int, int> IconItems = new ConcurrentDictionary<int, int>();
         string[] array;
         if (Row["icon_items"].ToString() != "")
         {
             array = Row["icon_items"].ToString().Split('|');
             foreach (string Bit in array)
             {
-                IconItems.Add(int.Parse(Bit.Split(',')[0]), int.Parse(Bit.Split(',')[1]));
+                IconItems.TryAdd(int.Parse(Bit.Split(',')[0]), int.Parse(Bit.Split(',')[1]));
             }
         }
         myIcon = new RoomIcon((int)Row["icon_bg"], (int)Row["icon_fg"], IconItems);

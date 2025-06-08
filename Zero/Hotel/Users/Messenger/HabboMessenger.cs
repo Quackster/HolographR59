@@ -10,22 +10,22 @@ internal class HabboMessenger
 {
     private uint UserId;
 
-    private List<MessengerBuddy> Buddies;
+    private SynchronizedCollection<MessengerBuddy> Buddies;
 
-    private List<MessengerRequest> Requests;
+    private SynchronizedCollection<MessengerRequest> Requests;
 
     public bool AppearOffline;
 
     public HabboMessenger(uint UserId)
     {
-        Buddies = new List<MessengerBuddy>();
-        Requests = new List<MessengerRequest>();
+        Buddies = new SynchronizedCollection<MessengerBuddy>();
+        Requests = new SynchronizedCollection<MessengerRequest>();
         this.UserId = UserId;
     }
 
     public void LoadBuddies()
     {
-        Buddies = new List<MessengerBuddy>();
+        Buddies = new SynchronizedCollection<MessengerBuddy>();
         DataTable Data = null;
         using (DatabaseClient dbClient = HolographEnvironment.GetDatabase().GetClient())
         {
@@ -43,7 +43,7 @@ internal class HabboMessenger
 
     public void LoadRequests()
     {
-        Requests = new List<MessengerRequest>();
+        Requests = new SynchronizedCollection<MessengerRequest>();
         DataTable Data = null;
         using (DatabaseClient dbClient = HolographEnvironment.GetDatabase().GetClient())
         {
@@ -71,57 +71,63 @@ internal class HabboMessenger
 
     public MessengerRequest GetRequest(uint RequestId)
     {
-        lock (Requests)
+        foreach (MessengerRequest Request in Requests)
         {
-            List<MessengerRequest>.Enumerator eRequests = Requests.GetEnumerator();
+            if (Request.RequestId == RequestId)
+            {
+                return Request;
+            }
+        }
+        /*
+        badlock (this.Requests)
+        {
+            ConcurrentDictionary<MessengerRequest>.Enumerator eRequests = this.Requests.GetEnumerator();
+
             while (eRequests.MoveNext())
             {
                 MessengerRequest Request = eRequests.Current;
+
                 if (Request.RequestId == RequestId)
                 {
                     return Request;
                 }
             }
-        }
+        }*/
+
         return null;
     }
 
     public void OnStatusChanged(bool instantUpdate)
     {
-        lock (Buddies)
+        foreach (MessengerBuddy Buddy in this.Buddies)
         {
-            List<MessengerBuddy>.Enumerator eBuddies = Buddies.GetEnumerator();
-            while (eBuddies.MoveNext())
+            GameClient Client = HolographEnvironment.GetGame().GetClientManager().GetClientByHabbo(Buddy.Id);
+
+            if (Client == null || Client.GetHabbo() == null || Client.GetHabbo().GetMessenger() == null)
             {
-                MessengerBuddy Buddy = eBuddies.Current;
-                GameClient Client = HolographEnvironment.GetGame().GetClientManager().GetClientByHabbo(Buddy.Id);
-                if (Client != null && Client.GetHabbo() != null && Client.GetHabbo().GetMessenger() != null)
-                {
-                    Client.GetHabbo().GetMessenger().SetUpdateNeeded(UserId);
-                    if (instantUpdate)
-                    {
-                        Client.GetHabbo().GetMessenger().ForceUpdate();
-                    }
-                }
+                continue;
+            }
+
+            Client.GetHabbo().GetMessenger().SetUpdateNeeded(UserId);
+
+            if (instantUpdate)
+            {
+                Client.GetHabbo().GetMessenger().ForceUpdate();
             }
         }
     }
 
     public bool SetUpdateNeeded(uint UserId)
     {
-        lock (Buddies)
+        foreach (MessengerBuddy Buddy in this.Buddies)
         {
-            List<MessengerBuddy>.Enumerator eBuddies = Buddies.GetEnumerator();
-            while (eBuddies.MoveNext())
+            if (Buddy.Id == UserId)
             {
-                MessengerBuddy Buddy = eBuddies.Current;
-                if (Buddy.Id == UserId)
-                {
-                    Buddy.UpdateNeeded = true;
-                    return true;
-                }
+                Buddy.UpdateNeeded = true;
+                return true;
             }
         }
+
         return false;
     }
 
@@ -233,8 +239,6 @@ internal class HabboMessenger
 
     public void OnDestroyFriendship(uint Friend)
     {
-        lock (Buddies)
-        {
             foreach (MessengerBuddy Buddy in Buddies)
             {
                 if (Buddy.Id == Friend)
@@ -243,7 +247,6 @@ internal class HabboMessenger
                     break;
                 }
             }
-        }
         GetClient().GetMessageHandler().GetResponse().Init(13u);
         GetClient().GetMessageHandler().GetResponse().AppendInt32(0);
         GetClient().GetMessageHandler().GetResponse().AppendInt32(1);
@@ -356,12 +359,9 @@ internal class HabboMessenger
         Friends.AppendInt32(900);
         Friends.AppendBoolean(Bool: false);
         Friends.AppendInt32(Buddies.Count);
-        lock (Buddies)
+        foreach (MessengerBuddy Buddy in Buddies)
         {
-            foreach (MessengerBuddy Buddy in Buddies)
-            {
-                Buddy.Serialize(Friends, Search: false);
-            }
+            Buddy.Serialize(Friends, Search: false);
         }
         return Friends;
     }
@@ -370,8 +370,6 @@ internal class HabboMessenger
     {
         List<MessengerBuddy> UpdateBuddies = new List<MessengerBuddy>();
         int UpdateCount = 0;
-        lock (Buddies)
-        {
             foreach (MessengerBuddy Buddy in Buddies)
             {
                 if (Buddy.UpdateNeeded)
@@ -381,7 +379,6 @@ internal class HabboMessenger
                     Buddy.UpdateNeeded = false;
                 }
             }
-        }
         ServerMessage Updates = new ServerMessage(13u);
         Updates.AppendInt32(0);
         Updates.AppendInt32(UpdateCount);
@@ -399,13 +396,11 @@ internal class HabboMessenger
         ServerMessage Reqs = new ServerMessage(314u);
         Reqs.AppendInt32(Requests.Count);
         Reqs.AppendInt32(Requests.Count);
-        lock (Requests)
-        {
             foreach (MessengerRequest Request in Requests)
             {
                 Request.Serialize(Reqs);
             }
-        }
+      
         return Reqs;
     }
 
@@ -452,7 +447,7 @@ internal class HabboMessenger
         return HolographEnvironment.GetGame().GetClientManager().GetClientByHabbo(UserId);
     }
 
-    public List<MessengerBuddy> GetBuddies()
+    public SynchronizedCollection<MessengerBuddy> GetBuddies()
     {
         return Buddies;
     }

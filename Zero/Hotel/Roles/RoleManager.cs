@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using Zero.Hotel.Users;
@@ -7,17 +8,15 @@ namespace Zero.Hotel.Roles;
 
 internal class RoleManager
 {
-    private Dictionary<uint, Role> Roles;
-
-    private Dictionary<string, uint> Rights;
-
-    private Dictionary<string, string> SubRights;
+    private ConcurrentDictionary<uint, Role> Roles;
+    private ConcurrentDictionary<string, uint> Rights;
+    private ConcurrentDictionary<string, string> SubRights;
 
     public RoleManager()
     {
-        Roles = new Dictionary<uint, Role>();
-        Rights = new Dictionary<string, uint>();
-        SubRights = new Dictionary<string, string>();
+        Roles = new ConcurrentDictionary<uint, Role>();
+        Rights = new ConcurrentDictionary<string, uint>();
+        SubRights = new ConcurrentDictionary<string, string>();
     }
 
     public void LoadRoles()
@@ -34,7 +33,7 @@ internal class RoleManager
         }
         foreach (DataRow Row in Data.Rows)
         {
-            Roles.Add((uint)Row["id"], new Role((uint)Row["id"], (string)Row["name"]));
+            Roles.TryAdd((uint)Row["id"], new Role((uint)Row["id"], (string)Row["name"]));
         }
     }
 
@@ -52,7 +51,7 @@ internal class RoleManager
         {
             foreach (DataRow Row in Data.Rows)
             {
-                Rights.Add(Row["fuse"].ToString().ToLower(), (uint)Row["rank"]);
+                Rights.TryAdd(Row["fuse"].ToString().ToLower(), (uint)Row["rank"]);
             }
         }
         if (SubData == null)
@@ -61,7 +60,7 @@ internal class RoleManager
         }
         foreach (DataRow Row in SubData.Rows)
         {
-            SubRights.Add((string)Row["fuse"], (string)Row["sub"]);
+            SubRights.TryAdd((string)Row["fuse"], (string)Row["sub"]);
         }
     }
 
@@ -111,14 +110,11 @@ internal class RoleManager
     public List<string> GetRightsForRank(uint RankId)
     {
         List<string> UserRights = new List<string>();
-        lock (Rights)
+        foreach (KeyValuePair<string, uint> Data in Rights)
         {
-            foreach (KeyValuePair<string, uint> Data in Rights)
+            if (RankId >= Data.Value && !UserRights.Contains(Data.Key))
             {
-                if (RankId >= Data.Value && !UserRights.Contains(Data.Key))
-                {
-                    UserRights.Add(Data.Key);
-                }
+                UserRights.Add(Data.Key);
             }
         }
         return UserRights;
@@ -127,16 +123,15 @@ internal class RoleManager
     public List<string> GetRightsForSub(string SubId)
     {
         List<string> UserRights = new List<string>();
-        lock (Rights)
+
+        foreach (KeyValuePair<string, string> Data in SubRights)
         {
-            foreach (KeyValuePair<string, string> Data in SubRights)
+            if (Data.Value == SubId)
             {
-                if (Data.Value == SubId)
-                {
-                    UserRights.Add(Data.Key);
-                }
+                UserRights.Add(Data.Key);
             }
         }
+
         return UserRights;
     }
 

@@ -23,12 +23,12 @@ internal class PetBot : BotAI
     private void RemovePetStatus()
     {
         RoomUser Pet = GetRoomUser();
-        Pet.Statusses.Remove("sit");
-        Pet.Statusses.Remove("lay");
-        Pet.Statusses.Remove("snf");
-        Pet.Statusses.Remove("eat");
-        Pet.Statusses.Remove("ded");
-        Pet.Statusses.Remove("jmp");
+        Pet.Statusses.TryRemove("sit", out var _);
+        Pet.Statusses.TryRemove("lay", out var _);
+        Pet.Statusses.TryRemove("snf", out var _);
+        Pet.Statusses.TryRemove("eat", out var _);
+        Pet.Statusses.TryRemove("ded", out var _);
+        Pet.Statusses.TryRemove("jmp", out var _);
     }
 
     public override void OnSelfEnterRoom()
@@ -136,7 +136,7 @@ internal class PetBot : BotAI
                     case "Sit":
                         RemovePetStatus();
                         Pet.PetData.AddExpirience(10);
-                        Pet.Statusses.Add("sit", Pet.Z.ToString());
+                        Pet.Statusses.TryAdd("sit", Pet.Z.ToString());
                         ActionTimer = 25;
                         EnergyTimer = 10;
                         break;
@@ -160,7 +160,7 @@ internal class PetBot : BotAI
                     case "Lay":
                     case "deita":
                         RemovePetStatus();
-                        Pet.Statusses.Add("lay", Pet.Z.ToString());
+                        Pet.Statusses.TryAdd("lay", Pet.Z.ToString());
                         Pet.PetData.AddExpirience(10);
                         ActionTimer = 30;
                         EnergyTimer = 5;
@@ -170,7 +170,7 @@ internal class PetBot : BotAI
                     case "Dead":
                     case "morre":
                         RemovePetStatus();
-                        Pet.Statusses.Add("ded", Pet.Z.ToString());
+                        Pet.Statusses.TryAdd("ded", Pet.Z.ToString());
                         Pet.PetData.AddExpirience(10);
                         SpeechTimer = 45;
                         ActionTimer = 30;
@@ -180,7 +180,7 @@ internal class PetBot : BotAI
                     case "dorme":
                         RemovePetStatus();
                         Pet.Chat(null, "ZzzZZZzzzzZzz", Shout: false);
-                        Pet.Statusses.Add("lay", Pet.Z.ToString());
+                        Pet.Statusses.TryAdd("lay", Pet.Z.ToString());
                         Pet.PetData.AddExpirience(10);
                         EnergyTimer = 5;
                         SpeechTimer = 30;
@@ -190,7 +190,7 @@ internal class PetBot : BotAI
                     case "Jump":
                     case "pula":
                         RemovePetStatus();
-                        Pet.Statusses.Add("jmp", Pet.Z.ToString());
+                        Pet.Statusses.TryAdd("jmp", Pet.Z.ToString());
                         Pet.PetData.AddExpirience(10);
                         EnergyTimer = 5;
                         SpeechTimer = 10;
@@ -215,7 +215,7 @@ internal class PetBot : BotAI
                     string[] Speech = new string[7] { "ZzZzzzzz", "*Tô cansado*", "Cansado *Está cansado*", "ZzZzZZzzzZZz", "zzZzzZzzz", "... Com Sonoo ..", "ZzZzzZ" };
                     Random RandomSpeech = new Random();
                     Pet.Chat(null, Speech[RandomSpeech.Next(0, Speech.Length - 1)], Shout: false);
-                    Pet.Statusses.Add("lay", Pet.Z.ToString());
+                    Pet.Statusses.TryAdd("lay", Pet.Z.ToString());
                     SpeechTimer = 50;
                     ActionTimer = 45;
                     EnergyTimer = 5;
@@ -255,7 +255,7 @@ internal class PetBot : BotAI
                     }
                     else
                     {
-                        Pet.Statusses.Add(rSpeech, Pet.Z.ToString());
+                        Pet.Statusses.TryAdd(rSpeech, Pet.Z.ToString());
                     }
                 }
                 else if (Pet.PetData.Type == 1)
@@ -268,7 +268,7 @@ internal class PetBot : BotAI
                     }
                     else
                     {
-                        Pet.Statusses.Add(rSpeech, Pet.Z.ToString());
+                        Pet.Statusses.TryAdd(rSpeech, Pet.Z.ToString());
                     }
                 }
                 else if (Pet.PetData.Type == 2)
@@ -281,7 +281,7 @@ internal class PetBot : BotAI
                     }
                     else
                     {
-                        Pet.Statusses.Add(rSpeech, Pet.Z.ToString());
+                        Pet.Statusses.TryAdd(rSpeech, Pet.Z.ToString());
                     }
                 }
                 else if (Pet.PetData.Type == 4)
@@ -294,7 +294,7 @@ internal class PetBot : BotAI
                     }
                     else
                     {
-                        Pet.Statusses.Add(rSpeech, Pet.Z.ToString());
+                        Pet.Statusses.TryAdd(rSpeech, Pet.Z.ToString());
                     }
                 }
                 else if (Pet.PetData.Type == 5)
@@ -307,7 +307,7 @@ internal class PetBot : BotAI
                     }
                     else
                     {
-                        Pet.Statusses.Add(rSpeech, Pet.Z.ToString());
+                        Pet.Statusses.TryAdd(rSpeech, Pet.Z.ToString());
                     }
                 }
                 else if (Pet.PetData.Type == 6)
@@ -320,7 +320,7 @@ internal class PetBot : BotAI
                     }
                     else
                     {
-                        Pet.Statusses.Add(rSpeech, Pet.Z.ToString());
+                        Pet.Statusses.TryAdd(rSpeech, Pet.Z.ToString());
                     }
                 }
                 else if (Pet.PetData.Type == 7)
@@ -333,7 +333,7 @@ internal class PetBot : BotAI
                     }
                     else
                     {
-                        Pet.Statusses.Add(rSpeech, Pet.Z.ToString());
+                        Pet.Statusses.TryAdd(rSpeech, Pet.Z.ToString());
                     }
                 }
                 Pet = null;

@@ -12,17 +12,17 @@ namespace Zero.Hotel.Support;
 
 internal class ModerationTool
 {
-    private List<SupportTicket> Tickets;
+    private SynchronizedCollection<SupportTicket> Tickets;
 
-    public List<string> UserMessagePresets;
+    public SynchronizedCollection<string> UserMessagePresets;
 
-    public List<string> RoomMessagePresets;
+    public SynchronizedCollection<string> RoomMessagePresets;
 
     public ModerationTool()
     {
-        Tickets = new List<SupportTicket>();
-        UserMessagePresets = new List<string>();
-        RoomMessagePresets = new List<string>();
+        Tickets = new SynchronizedCollection<SupportTicket>();
+        UserMessagePresets = new SynchronizedCollection<string>();
+        RoomMessagePresets = new SynchronizedCollection<string>();
     }
 
     public ServerMessage SerializeTool()
@@ -30,22 +30,9 @@ internal class ModerationTool
         ServerMessage Message = new ServerMessage(531u);
         Message.AppendInt32(-1);
         Message.AppendInt32(UserMessagePresets.Count);
-        bool lockTaken = false;
-        List<string> obj = default(List<string>);
-        try
+        foreach (String Preset in UserMessagePresets)
         {
-            Monitor.Enter(obj = UserMessagePresets, ref lockTaken);
-            foreach (string Preset in UserMessagePresets)
-            {
-                Message.AppendStringWithBreak(Preset);
-            }
-        }
-        finally
-        {
-            if (lockTaken)
-            {
-                Monitor.Exit(obj);
-            }
+            Message.AppendStringWithBreak(Preset);
         }
         Message.AppendInt32(0);
         Message.AppendInt32(14);
@@ -56,21 +43,9 @@ internal class ModerationTool
         Message.AppendInt32(1);
         Message.AppendInt32(1);
         Message.AppendInt32(RoomMessagePresets.Count);
-        bool lockTaken2 = false;
-        try
+        foreach (String Preset in RoomMessagePresets)
         {
-            Monitor.Enter(obj = RoomMessagePresets, ref lockTaken2);
-            foreach (string Preset in RoomMessagePresets)
-            {
-                Message.AppendStringWithBreak(Preset);
-            }
-        }
-        finally
-        {
-            if (lockTaken2)
-            {
-                Monitor.Exit(obj);
-            }
+            Message.AppendStringWithBreak(Preset);
         }
         Message.AppendInt32(1);
         Message.AppendInt32(1);
@@ -223,8 +198,6 @@ internal class ModerationTool
 
     public void SendOpenTickets(GameClient Session)
     {
-        lock (Tickets)
-        {
             foreach (SupportTicket Ticket in Tickets)
             {
                 if (Ticket.Status == TicketStatus.OPEN || Ticket.Status == TicketStatus.PICKED)
@@ -232,13 +205,10 @@ internal class ModerationTool
                     Session.SendMessage(Ticket.Serialize());
                 }
             }
-        }
     }
 
     public SupportTicket GetTicket(uint TicketId)
     {
-        lock (Tickets)
-        {
             foreach (SupportTicket Ticket in Tickets)
             {
                 if (Ticket.TicketId == TicketId)
@@ -246,7 +216,6 @@ internal class ModerationTool
                     return Ticket;
                 }
             }
-        }
         return null;
     }
 
@@ -313,8 +282,6 @@ internal class ModerationTool
 
     public bool UsersHasPendingTicket(uint Id)
     {
-        lock (Tickets)
-        {
             foreach (SupportTicket Ticket in Tickets)
             {
                 if (Ticket.SenderId == Id && Ticket.Status == TicketStatus.OPEN)
@@ -322,14 +289,11 @@ internal class ModerationTool
                     return true;
                 }
             }
-        }
         return false;
     }
 
     public void DeletePendingTicketForUser(uint Id)
     {
-        lock (Tickets)
-        {
             foreach (SupportTicket Ticket in Tickets)
             {
                 if (Ticket.SenderId == Id)
@@ -339,7 +303,6 @@ internal class ModerationTool
                     break;
                 }
             }
-        }
     }
 
     public void SendTicketToModerators(SupportTicket Ticket)
@@ -372,8 +335,6 @@ internal class ModerationTool
         {
             return;
         }
-        lock (Room.UserList)
-        {
             List<RoomUser> ToRemove = new List<RoomUser>();
             foreach (RoomUser User in Room.UserList)
             {
@@ -386,7 +347,6 @@ internal class ModerationTool
             {
                 Room.RemoveUserFromRoom(ToRemove[i].GetClient(), NotifyClient: true, NotifyKick: false);
             }
-        }
     }
 
     public void RoomAlert(uint RoomId, bool Caution, string Message)
@@ -398,8 +358,6 @@ internal class ModerationTool
         }
         StringBuilder QueryBuilder = new StringBuilder();
         int j = 0;
-        lock (Room.UserList)
-        {
             foreach (RoomUser User in Room.UserList)
             {
                 if (!User.IsBot)
@@ -413,7 +371,6 @@ internal class ModerationTool
                     j++;
                 }
             }
-        }
         if (!Caution)
         {
             return;
@@ -465,12 +422,9 @@ internal class ModerationTool
                 Message.AppendStringWithBreak(Room.Event.Name);
                 Message.AppendStringWithBreak(Room.Event.Description);
                 Message.AppendInt32(Room.Event.Tags.Count);
-                lock (Room.Event.Tags)
+                foreach (string Tag in Room.Event.Tags)
                 {
-                    foreach (string Tag in Room.Event.Tags)
-                    {
-                        Message.AppendStringWithBreak(Tag);
-                    }
+                    Message.AppendStringWithBreak(Tag);
                 }
             }
         }

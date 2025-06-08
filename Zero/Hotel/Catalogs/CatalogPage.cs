@@ -1,8 +1,13 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using System.Data;
+
 using Zero.Hotel.GameClients;
 using Zero.Messages;
 using Zero.Storage;
+using System.Collections.Concurrent;
 
 namespace Zero.Hotel.Catalogs;
 
@@ -44,13 +49,13 @@ internal class CatalogPage
 
     public string TextTeaser;
 
-    public List<CatalogItem> Items;
+    public SynchronizedCollection<CatalogItem> Items;
 
     public int PageId => Id;
 
     public CatalogPage(int Id, int ParentId, string Caption, bool Visible, bool Enabled, bool ComingSoon, uint MinRank, bool ClubOnly, int IconColor, int IconImage, string Layout, string LayoutHeadline, string LayoutTeaser, string LayoutSpecial, string Text1, string Text2, string TextDetails, string TextTeaser)
     {
-        Items = new List<CatalogItem>();
+        Items = new SynchronizedCollection<CatalogItem>();
         this.Id = Id;
         this.ParentId = ParentId;
         this.Caption = Caption;
@@ -89,18 +94,17 @@ internal class CatalogPage
 
     public CatalogItem GetItem(uint Id)
     {
-        lock (Items)
+        foreach (CatalogItem Item in Items)
         {
-            foreach (CatalogItem Item in Items)
+            if (Item.Id == Id)
             {
-                if (Item.Id == Id)
-                {
-                    return Item;
-                }
+                return Item;
             }
         }
+
         return null;
     }
+
 
     public void Serialize(GameClient Session, ServerMessage Message)
     {

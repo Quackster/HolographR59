@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Threading;
@@ -12,111 +13,132 @@ internal class RoomManager
 {
     public readonly int MAX_PETS_PER_ROOM = 10;
 
-    private Dictionary<uint, Room> Rooms;
+    private ConcurrentDictionary<uint, Room> Rooms;
 
-    private Dictionary<string, RoomModel> Models;
+    private ConcurrentDictionary<string, RoomModel> Models;
 
-    private List<TeleUserData> TeleActions;
+    private SynchronizedCollection<TeleUserData> TeleActions;
 
     private Thread EngineThread;
 
-    private List<uint> RoomsToUnload;
+    private SynchronizedCollection<uint> RoomsToUnload;
 
     public int LoadedRoomsCount => Rooms.Count;
 
     public RoomManager()
     {
-        Rooms = new Dictionary<uint, Room>();
-        Models = new Dictionary<string, RoomModel>();
-        TeleActions = new List<TeleUserData>();
-        EngineThread = new Thread(ProcessEngine);
-        EngineThread.Name = "Room Engine";
-        EngineThread.Priority = ThreadPriority.AboveNormal;
-        EngineThread.Start();
-        RoomsToUnload = new List<uint>();
+        this.Rooms = new ConcurrentDictionary<uint, Room>();
+        this.Models = new ConcurrentDictionary<string, RoomModel>();
+        this.TeleActions = new SynchronizedCollection<TeleUserData>();
+        this.EngineThread = new Thread(ProcessEngine);
+        this.EngineThread.Name = "Room Engine";
+        this.EngineThread.Priority = ThreadPriority.AboveNormal;
+        this.EngineThread.Start();
+        this.RoomsToUnload = new SynchronizedCollection<uint>();
     }
 
     public void AddTeleAction(TeleUserData Act)
     {
-        lock (TeleActions)
-        {
             TeleActions.Add(Act);
-        }
     }
 
     public List<Room> GetEventRoomsForCategory(int Category)
     {
         List<Room> EventRooms = new List<Room>();
-        lock (Rooms)
+
+        foreach (var kvp in this.Rooms)
         {
-            Dictionary<uint, Room>.Enumerator eRooms = Rooms.GetEnumerator();
-            while (eRooms.MoveNext())
+            Room Room = kvp.Value;
+
+            if (Room.Event == null)
             {
-                Room Room = eRooms.Current.Value;
-                if (Room.Event != null && (Category <= 0 || Room.Event.Category == Category))
-                {
-                    EventRooms.Add(Room);
-                }
+                continue;
             }
+
+            if (Category > 0 && Room.Event.Category != Category)
+            {
+                continue;
+            }
+
+            EventRooms.Add(Room);
         }
+
         return EventRooms;
     }
 
     public void ProcessEngine()
     {
         Thread.Sleep(5000);
+
         while (true)
         {
-            // bool flag = true;
             DateTime ExecutionStart = DateTime.Now;
+
             try
             {
-                lock (Rooms)
+                /*
+                foreach (var kvp in this.Rooms)
                 {
-                    Dictionary<uint, Room>.Enumerator eRooms = Rooms.GetEnumerator();
-                    while (eRooms.MoveNext())
+                    Room Room = kvp.Value;
+
+                    if (!Room.KeepAlive)
                     {
-                        Room Room = eRooms.Current.Value;
-                        if (Room.KeepAlive)
-                        {
-                            Room.ProcessRoom();
-                        }
+                        continue;
                     }
-                }
-                lock (RoomsToUnload)
+
+                    Room.ProcessRoom();
+                }*/
+
+                foreach (uint RoomId in this.RoomsToUnload)
                 {
-                    foreach (uint RoomId in RoomsToUnload)
-                    {
-                        UnloadRoom(RoomId);
-                    }
-                    RoomsToUnload.Clear();
+                    UnloadRoom(RoomId);
                 }
-                lock (TeleActions)
+
+                this.RoomsToUnload.Clear();
+
+
+                foreach (var eTeleActions in this.TeleActions)
                 {
-                    List<TeleUserData>.Enumerator eTeleActions = TeleActions.GetEnumerator();
+                    eTeleActions.Execute();
+                }
+
+                this.TeleActions.Clear();
+                /*
+                badlock (this.TeleActions)
+                {
+                    ConcurrentDictionary<TeleUserData>.Enumerator eTeleActions = this.TeleActions.GetEnumerator();
+
                     while (eTeleActions.MoveNext())
                     {
                         eTeleActions.Current.Execute();
                     }
-                    TeleActions.Clear();
-                }
+
+                    this.TeleActions.Clear();
+                }*/
             }
+
             catch (InvalidOperationException)
             {
-                HolographEnvironment.GetLogging().WriteLine("InvalidOpException in Room Manager..", LogLevel.Error);
+                HolographEnvironment.GetLogging().WriteLine("InvalidOpException in Room Manager..", Core.LogLevel.Error);
             }
+
             finally
             {
                 DateTime ExecutionComplete = DateTime.Now;
-                double sleepTime = 500.0 - (ExecutionComplete - ExecutionStart).TotalMilliseconds;
-                if (sleepTime < 0.0)
+                TimeSpan Diff = ExecutionComplete - ExecutionStart;
+
+                double sleepTime = 500 - Diff.TotalMilliseconds;
+
+                if (sleepTime < 0)
                 {
-                    sleepTime = 0.0;
+                    sleepTime = 0;
                 }
-                if (sleepTime > 500.0)
+
+                if (sleepTime > 500)
                 {
-                    sleepTime = 500.0;
+                    sleepTime = 500;
                 }
+
                 Thread.Sleep((int)Math.Floor(sleepTime));
             }
         }
@@ -136,7 +158,7 @@ internal class RoomManager
         }
         foreach (DataRow Row in Data.Rows)
         {
-            Models.Add((string)Row["id"], new RoomModel((string)Row["id"], (int)Row["door_x"], (int)Row["door_y"], (double)Row["door_z"], (int)Row["door_dir"], (string)Row["heightmap"], (string)Row["public_items"], HolographEnvironment.EnumToBool(Row["club_only"].ToString())));
+            Models.TryAdd((string)Row["id"], new RoomModel((string)Row["id"], (int)Row["door_x"], (int)Row["door_y"], (double)Row["door_z"], (int)Row["door_dir"], (string)Row["heightmap"], (string)Row["public_items"], HolographEnvironment.EnumToBool(Row["club_only"].ToString())));
         }
     }
 
@@ -202,12 +224,10 @@ internal class RoomManager
         if (Data != null)
         {
             Room Room = new Room(Data.Id, Data.Name, Data.Description, Data.Type, Data.Owner, Data.Category, Data.State, Data.UsersMax, Data.ModelName, Data.CCTs, Data.Score, Data.Tags, Data.AllowPets, Data.AllowPetsEating, Data.AllowWalkthrough, Data.Hidewall, Data.Icon, Data.Password, Data.Wallpaper, Data.Floor, Data.Landscape);
-            lock (Rooms)
-            {
-                Rooms.Add(Room.RoomId, Room);
-            }
+                Rooms.TryAdd(Room.RoomId, Room);
             Room.InitBots();
             Room.InitPets();
+            Room.StartProcessRoutine();
         }
     }
 
@@ -217,11 +237,9 @@ internal class RoomManager
         {
             return;
         }
-        lock (RoomsToUnload)
-        {
             GetRoom(Id).KeepAlive = false;
-            RoomsToUnload.Add(Id);
-        }
+        GetRoom(Id).StopProcessRoutine();
+        RoomsToUnload.Add(Id);
     }
 
     public void UnloadRoom(uint Id)
@@ -234,24 +252,22 @@ internal class RoomManager
         lock (Rooms)
         {
             Room.Destroy();
-            Rooms.Remove(Id);
+            Rooms.TryRemove(Id, out var _);
         }
     }
 
     public Room GetRoom(uint RoomId)
     {
-        lock (Rooms)
+        foreach (var kvp in this.Rooms)
         {
-            Dictionary<uint, Room>.Enumerator eRooms = Rooms.GetEnumerator();
-            while (eRooms.MoveNext())
+            Room Room = kvp.Value;
+
+            if (Room.RoomId == RoomId)
             {
-                Room Room = eRooms.Current.Value;
-                if (Room.RoomId == RoomId)
-                {
-                    return Room;
-                }
+                return Room;
             }
         }
+
         return null;
     }
 
@@ -282,7 +298,15 @@ internal class RoomManager
             dbClient.AddParamWithValue("caption", Name);
             dbClient.AddParamWithValue("model", Model);
             dbClient.AddParamWithValue("username", Session.GetHabbo().Username);
-            dbClient.ExecuteQuery("INSERT INTO rooms (roomtype,caption,owner,model_name) VALUES ('private',@caption,@username,@model)");
+            try
+            {
+                dbClient.ExecuteQuery("INSERT INTO rooms (roomtype,caption,owner,model_name) VALUES ('private',@caption,@username,@model)");
+            } catch (Exception e)
+            {
+                Session.SendNotif("Couldn't create room. Error was logged.");
+                Console.WriteLine(e);
+                return null;
+            }
         }
 
         uint RoomId = 0u;

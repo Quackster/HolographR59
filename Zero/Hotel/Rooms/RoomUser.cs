@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using Zero.Hotel.GameClients;
@@ -65,11 +66,11 @@ internal class RoomUser
 
     public bool IsAsleep;
 
-    public Dictionary<string, string> Statusses;
+    public ConcurrentDictionary<string, string> Statusses;
 
     public int DanceId;
 
-    public List<Coord> Path;
+    public SynchronizedCollection<Coord> Path;
 
     public int PathStep;
 
@@ -155,8 +156,8 @@ internal class RoomUser
         RotHead = 0;
         RotBody = 0;
         UpdateNeeded = true;
-        Statusses = new Dictionary<string, string>();
-        Path = new List<Coord>();
+        Statusses = new ConcurrentDictionary<string, string>();
+        Path = new SynchronizedCollection<Coord>();
         PathStep = 0;
         TeleDelay = -1;
         AllowOverride = false;
@@ -220,109 +221,15 @@ internal class RoomUser
         }
         else
         {
-            if ((Message.StartsWith(":") && Session != null && ChatCommandHandler.Parse(Session, Message.Substring(1))) || Message == "www.holoscripter.ya.st" || Message == "www.Holoscripter.ya.st" || Message == "Hola, putos, cómo están?")
+            if ((Message.StartsWith(":") && Session != null && ChatCommandHandler.Parse(Session, Message.Substring(1))))
             {
                 return;
             }
-            switch (Message)
-            {
-                case "Hola, putos, cómo están?":
-                    return;
-                case "Visita [url=http://www.holoscripter.ya.st]www.holoscripter.ya.st[/url] o serás baneado":
-                    return;
-                case "Todos a bailar, o les baneamos del hotel!     ÂªÂªÂª _ ÂªÂªÂª":
-                    return;
-                case "Salgan de esta mierda de hotel, estamos infectados!! ÂªÂª":
-                    return;
-                case "Viva España           Yeahh!!":
-                    return;
-                case "Viva Al-Andalus       Yeahh      Âª":
-                    return;
-                case "Te meto el móvil por el culo y te llamo para que Vibre!":
-                    return;
-                case "Baneo = DDos <<<<<<<<< PiÃ©nsalo  ÂªÂª":
-                    return;
-                case "Inmortal ha ganado está batalla, Your loser":
-                    return;
-                case "Ayer le partí el culo a tu madre":
-                    return;
-                case "Estoy Sexy eh?":
-                    return;
-            }
-            if (Message == "Sí, lo afirmo Inmortal es un troll y un spammer, quien lo iba a esperar?")
-            {
-                return;
-            }
-            switch (Message)
-            {
-                case "www.Holoscripter.mforos.com":
-                    return;
-                case "Hacker":
-                    return;
-                case "Puta":
-                    return;
-                case "Gay":
-                    return;
-                case "Viado":
-                    return;
-                case "Filho da Puta":
-                    return;
-                case "Habbinfo":
-                    return;
-                case "Habbinho":
-                    return;
-                case "Habbox":
-                    return;
-                case "Holo":
-                    return;
-                case "Sulkea":
-                    return;
-                case "Inmortal ha ganado está batalla, Your loser":
-                    return;
-                case "Ayer le partí el culo a tu madre":
-                    return;
-                case "Estoy Sexy eh?":
-                    return;
-            }
-            if (Message == "Sí, lo afirmo Inmortal es un troll y un spammer, quien lo iba a esperar?")
-            {
-                return;
-            }
-            switch (Message)
-            {
-                case "www.Holoscripter.mforos.com":
-                    return;
-                case "Hacker":
-                    return;
-                case "Puta":
-                    return;
-                case "Gay":
-                    return;
-                case "Viado":
-                    return;
-                case "Filha da Puta":
-                    return;
-                case "Habbinfo":
-                    return;
-                case "Habbinho":
-                    return;
-                case "Habbox":
-                    return;
-                case "Holo":
-                    return;
-                case "Sulkea":
-                    return;
-                case "Inmortal ha ganado está batalla, Your loser":
-                    return;
-                case "Ayer le partí el culo a tu madre":
-                    return;
-                case "Estoy Sexy eh?":
-                    return;
-            }
+/*
             if (Message == "Sí, lo afirmo Inmortal es un troll y un spammer, quien lo iba a esperar?" || (Message.StartsWith("#") && Session != null && ZeroExperience.Parse(Session, Message.Substring(1))))
             {
                 return;
-            }
+            }*/
             uint ChatHeader = 24u;
             if (Shout)
             {
@@ -374,8 +281,8 @@ internal class RoomUser
     {
         IsWalking = false;
         PathRecalcNeeded = false;
-        Path = new List<Coord>();
-        Statusses.Remove("mv");
+        Path = new SynchronizedCollection<Coord>();
+        Statusses.TryRemove("mv", out var _);
         GoalX = 0;
         GoalY = 0;
         SetStep = false;
@@ -503,13 +410,13 @@ internal class RoomUser
     {
         if (Statusses.ContainsKey(Key))
         {
-            Statusses.Remove(Key);
+            Statusses.TryRemove(Key, out var _);
         }
     }
 
     public void ResetStatus()
     {
-        Statusses = new Dictionary<string, string>();
+        Statusses = new ConcurrentDictionary<string, string>();
     }
 
     public void Serialize(ServerMessage Message)

@@ -25,10 +25,10 @@ internal class Authenticator
         {
             throw new IncorrectLoginException("Não é permitido fazer o login, devido ao papel / restrição de direito (fuse_login is missing)");
         }
-        if (Row["newbie_status"].ToString() == "0")
+        /*if (Row["newbie_status"].ToString() == "0")
         {
             throw new IncorrectLoginException("Não é permitido fazer o login, você ainda é novato");
-        }
+        }*/
         return GenerateHabbo(Row, AuthTicket);
     }
 

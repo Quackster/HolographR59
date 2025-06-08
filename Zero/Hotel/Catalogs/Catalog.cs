@@ -8,6 +8,7 @@ using Zero.Hotel.Navigators;
 using Zero.Hotel.Pets;
 using Zero.Messages;
 using Zero.Storage;
+using System.Collections.Concurrent;
 
 namespace Zero.Hotel.Catalogs;
 
@@ -21,7 +22,7 @@ internal class Catalog
 
     private Marketplace Marketplace;
 
-    private readonly object ItemGeneratorLock = new object();
+    //private readonly object ItemGeneratorLock = new object();
 
     public Catalog()
     {
@@ -74,22 +75,17 @@ internal class Catalog
 
     public CatalogItem FindItem(uint ItemId)
     {
-        lock (Pages.Values)
+        foreach (CatalogPage Page in Pages.Values)
         {
-            foreach (CatalogPage Page in Pages.Values)
+            foreach (CatalogItem Item in Page.Items)
             {
-                lock (Page.Items)
+                if (Item.Id == ItemId)
                 {
-                    foreach (CatalogItem Item in Page.Items)
-                    {
-                        if (Item.Id == ItemId)
-                        {
-                            return Item;
-                        }
-                    }
+                    return Item;
                 }
             }
         }
+
         return null;
     }
 
@@ -110,16 +106,20 @@ internal class Catalog
     public int GetTreeSize(GameClient Session, int TreeId)
     {
         int i = 0;
-        lock (Pages)
+
+        foreach (CatalogPage Page in Pages.Values)
         {
-            foreach (CatalogPage Page in Pages.Values)
+            if (Page.MinRank > Session.GetHabbo().Rank)
             {
-                if (Page.MinRank <= Session.GetHabbo().Rank && Page.ParentId == TreeId)
-                {
-                    i++;
-                }
+                continue;
+            }
+
+            if (Page.ParentId == TreeId)
+            {
+                i++;
             }
         }
+
         return i;
     }
 
@@ -549,27 +549,26 @@ internal class Catalog
     public Pet CreatePet(uint UserId, string Name, int Type, string Race, string Color)
     {
         DataRow Row = null;
-        lock (HolographEnvironment.GetGame().GetCatalog().ItemGeneratorLock)
-        {
-            using (DatabaseClient dbClient = HolographEnvironment.GetDatabase().GetClient())
-            {
-                dbClient.AddParamWithValue("userid", UserId);
-                dbClient.AddParamWithValue("name", Name);
-                dbClient.AddParamWithValue("type", Type);
-                dbClient.AddParamWithValue("race", Race);
-                dbClient.AddParamWithValue("color", Color);
-                dbClient.AddParamWithValue("createstamp", HolographEnvironment.GetUnixTimestamp());
-                dbClient.ReadDataRow("INSERT INTO user_pets (user_id,name,type,race,color,expirience,energy,createstamp) VALUES (@userid,@name,@type,@race,@color,0,100,@createstamp)");
-            }
 
-            using (DatabaseClient dbClient = HolographEnvironment.GetDatabase().GetClient())
-            {
-                dbClient.AddParamWithValue("userid", UserId);
-                dbClient.AddParamWithValue("name", Name);
-                Row = dbClient.ReadDataRow("SELECT * FROM user_pets WHERE user_id = @userid AND name = @name LIMIT 1");
-            }
+        using (DatabaseClient dbClient = HolographEnvironment.GetDatabase().GetClient())
+        {
+            dbClient.AddParamWithValue("userid", UserId);
+            dbClient.AddParamWithValue("name", Name);
+            dbClient.AddParamWithValue("type", Type);
+            dbClient.AddParamWithValue("race", Race);
+            dbClient.AddParamWithValue("color", Color);
+            dbClient.AddParamWithValue("createstamp", HolographEnvironment.GetUnixTimestamp());
+            dbClient.ReadDataRow("INSERT INTO user_pets (user_id,name,type,race,color,expirience,energy,createstamp) VALUES (@userid,@name,@type,@race,@color,0,100,@createstamp)");
         }
-        return GeneratePetFromRow(Row);
+
+        using (DatabaseClient dbClient = HolographEnvironment.GetDatabase().GetClient())
+        {
+            dbClient.AddParamWithValue("userid", UserId);
+            dbClient.AddParamWithValue("name", Name);
+            Row = dbClient.ReadDataRow("SELECT * FROM user_pets WHERE user_id = @userid AND name = @name LIMIT 1");
+        }
+
+        return this.GeneratePetFromRow(Row);
     }
 
     public Pet GeneratePetFromRow(DataRow Row)
@@ -578,21 +577,21 @@ internal class Catalog
         {
             return null;
         }
+
         return new Pet((uint)Row["id"], (uint)Row["user_id"], (uint)Row["room_id"], (string)Row["name"], (uint)Row["type"], (string)Row["race"], (string)Row["color"], (int)Row["expirience"], (int)Row["energy"], (int)Row["nutrition"], (int)Row["respect"], (double)Row["createstamp"], (int)Row["x"], (int)Row["y"], (double)Row["z"]);
     }
 
     public uint GenerateItemId()
     {
-        lock (ItemGeneratorLock)
+        uint i = 0;
+
+        using (DatabaseClient dbClient = HolographEnvironment.GetDatabase().GetClient())
         {
-            uint i = 0u;
-            using (DatabaseClient dbClient = HolographEnvironment.GetDatabase().GetClient())
-            {
-                i = (uint)dbClient.ReadDataRow("SELECT id_generator FROM item_id_generator LIMIT 1")[0];
-                dbClient.ExecuteQuery("Update item_id_generator SET id_generator = id_generator + 1 LIMIT 1");
-            }
-            return i;
+            i = (uint)dbClient.ReadDataRow("SELECT id_generator FROM item_id_generator LIMIT 1")[0];
+            dbClient.ExecuteQuery("UPDATE item_id_generator SET id_generator = id_generator + 1 LIMIT 1");
         }
+
+        return i;
     }
 
     public EcotronReward GetRandomEcotronReward()
