@@ -12,7 +12,7 @@ internal class TradeUser
 
     private bool Accepted;
 
-    public List<UserItem> OfferedItems;
+    public SynchronizedCollection<UserItem> OfferedItems;
 
     public bool HasAccepted
     {
@@ -31,7 +31,7 @@ internal class TradeUser
         this.UserId = UserId;
         this.RoomId = RoomId;
         Accepted = false;
-        OfferedItems = new List<UserItem>();
+        OfferedItems = new SynchronizedCollection<UserItem>();
     }
 
     public RoomUser GetRoomUser()

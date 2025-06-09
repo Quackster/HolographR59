@@ -105,16 +105,15 @@ internal class HelpTool
     public int ArticlesInCategory(uint CategoryId)
     {
         int i = 0;
-        lock (Topics)
+
+        foreach (HelpTopic Topic in Topics.Values)
         {
-            foreach (HelpTopic Topic in Topics.Values)
+            if (Topic.CategoryId == CategoryId)
             {
-                if (Topic.CategoryId == CategoryId)
-                {
-                    i++;
-                }
+                i++;
             }
         }
+
         return i;
     }
 

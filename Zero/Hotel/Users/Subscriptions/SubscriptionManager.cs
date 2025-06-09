@@ -16,13 +16,12 @@ internal class SubscriptionManager
         get
         {
             SynchronizedCollection<string> List = new SynchronizedCollection<string>();
-            lock (Subscriptions.Values)
-            {
+
                 foreach (Subscription Subscription in Subscriptions.Values)
                 {
                     List.Add(Subscription.SubscriptionId);
                 }
-            }
+            
             return List;
         }
     }

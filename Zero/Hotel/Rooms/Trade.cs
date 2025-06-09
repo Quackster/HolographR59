@@ -6,7 +6,7 @@ namespace Zero.Hotel.Rooms;
 
 internal class Trade
 {
-    private List<TradeUser> Users;
+    private SynchronizedCollection<TradeUser> Users;
 
     private int TradeStage;
 
@@ -20,16 +20,15 @@ internal class Trade
     {
         get
         {
-            lock (Users)
+
+            foreach (TradeUser User in Users)
             {
-                foreach (TradeUser User in Users)
+                if (!User.HasAccepted)
                 {
-                    if (!User.HasAccepted)
-                    {
-                        return false;
-                    }
+                    return false;
                 }
             }
+
             return true;
         }
     }
@@ -38,7 +37,7 @@ internal class Trade
     {
         oneId = UserOneId;
         twoId = UserTwoId;
-        Users = new List<TradeUser>(2);
+        Users = new SynchronizedCollection<TradeUser>(2);
         Users.Add(new TradeUser(UserOneId, RoomId));
         Users.Add(new TradeUser(UserTwoId, RoomId));
         TradeStage = 1;
@@ -61,31 +60,29 @@ internal class Trade
 
     public bool ContainsUser(uint Id)
     {
-        lock (Users)
+
+        foreach (TradeUser User in Users)
         {
-            foreach (TradeUser User in Users)
+            if (User.UserId == Id)
             {
-                if (User.UserId == Id)
-                {
-                    return true;
-                }
+                return true;
             }
         }
+
         return false;
     }
 
     public TradeUser GetTradeUser(uint Id)
     {
-        lock (Users)
+
+        foreach (TradeUser User in Users)
         {
-            foreach (TradeUser User in Users)
+            if (User.UserId == Id)
             {
-                if (User.UserId == Id)
-                {
-                    return User;
-                }
+                return User;
             }
         }
+
         return null;
     }
 
@@ -164,53 +161,48 @@ internal class Trade
 
     public void ClearAccepted()
     {
-        lock (Users)
+
+        foreach (TradeUser User in Users)
         {
-            foreach (TradeUser User in Users)
-            {
-                User.HasAccepted = false;
-            }
+            User.HasAccepted = false;
         }
     }
 
     public void UpdateTradeWindow()
     {
         ServerMessage Message = new ServerMessage(108u);
-        lock (Users)
+
+        foreach (TradeUser User in Users)
         {
-            foreach (TradeUser User in Users)
+            Message.AppendUInt(User.UserId);
+            Message.AppendInt32(User.OfferedItems.Count);
+
+            foreach (UserItem Item in User.OfferedItems)
             {
-                Message.AppendUInt(User.UserId);
-                Message.AppendInt32(User.OfferedItems.Count);
-                lock (User.OfferedItems)
+                Message.AppendUInt(Item.Id);
+                Message.AppendStringWithBreak(Item.GetBaseItem().Type.ToLower());
+                Message.AppendUInt(Item.Id);
+                Message.AppendInt32(Item.GetBaseItem().SpriteId);
+                Message.AppendBoolean(Bool: true);
+                Message.AppendBoolean(Bool: true);
+                Message.AppendStringWithBreak("");
+                Message.AppendBoolean(Bool: false);
+                Message.AppendBoolean(Bool: false);
+                Message.AppendBoolean(Bool: false);
+                if (Item.GetBaseItem().Type.ToLower() == "s")
                 {
-                    foreach (UserItem Item in User.OfferedItems)
-                    {
-                        Message.AppendUInt(Item.Id);
-                        Message.AppendStringWithBreak(Item.GetBaseItem().Type.ToLower());
-                        Message.AppendUInt(Item.Id);
-                        Message.AppendInt32(Item.GetBaseItem().SpriteId);
-                        Message.AppendBoolean(Bool: true);
-                        Message.AppendBoolean(Bool: true);
-                        Message.AppendStringWithBreak("");
-                        Message.AppendBoolean(Bool: false);
-                        Message.AppendBoolean(Bool: false);
-                        Message.AppendBoolean(Bool: false);
-                        if (Item.GetBaseItem().Type.ToLower() == "s")
-                        {
-                            Message.AppendInt32(-1);
-                        }
-                    }
+                    Message.AppendInt32(-1);
                 }
             }
         }
+
         SendMessageToUsers(Message);
     }
 
     public void DeliverItems()
     {
-        List<UserItem> ItemsOne = GetTradeUser(oneId).OfferedItems;
-        List<UserItem> ItemsTwo = GetTradeUser(twoId).OfferedItems;
+        SynchronizedCollection<UserItem> ItemsOne = GetTradeUser(oneId).OfferedItems;
+        SynchronizedCollection<UserItem> ItemsTwo = GetTradeUser(twoId).OfferedItems;
         foreach (UserItem I in ItemsOne)
         {
             if (GetTradeUser(oneId).GetClient().GetHabbo().GetInventoryComponent()
@@ -253,31 +245,27 @@ internal class Trade
 
     public void CloseTradeClean()
     {
-        lock (Users)
+        foreach (TradeUser User in Users)
         {
-            foreach (TradeUser User in Users)
-            {
-                User.GetRoomUser().RemoveStatus("trd");
-                User.GetRoomUser().UpdateNeeded = true;
-            }
+            User.GetRoomUser().RemoveStatus("trd");
+            User.GetRoomUser().UpdateNeeded = true;
         }
+
         SendMessageToUsers(new ServerMessage(112u));
         GetRoom().ActiveTrades.Remove(this);
     }
 
     public void CloseTrade(uint UserId)
     {
-        lock (Users)
+        foreach (TradeUser User in Users)
         {
-            foreach (TradeUser User in Users)
+            if (User.GetRoomUser() != null)
             {
-                if (User.GetRoomUser() != null)
-                {
-                    User.GetRoomUser().RemoveStatus("trd");
-                    User.GetRoomUser().UpdateNeeded = true;
-                }
+                User.GetRoomUser().RemoveStatus("trd");
+                User.GetRoomUser().UpdateNeeded = true;
             }
         }
+
         ServerMessage Message = new ServerMessage(110u);
         Message.AppendUInt(UserId);
         SendMessageToUsers(Message);
@@ -285,12 +273,9 @@ internal class Trade
 
     public void SendMessageToUsers(ServerMessage Message)
     {
-        lock (Users)
+        foreach (TradeUser User in Users)
         {
-            foreach (TradeUser User in Users)
-            {
-                User.GetClient().SendMessage(Message);
-            }
+            User.GetClient().SendMessage(Message);
         }
     }
 

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Text;
@@ -442,22 +443,35 @@ internal class GameClientMessageHandler
         {
             return;
         }
-        lock (Room.UserList)
+
+        foreach (var User in Room.UserList)
         {
-            List<RoomUser>.Enumerator Users = Room.UserList.GetEnumerator();
-            while (Users.MoveNext())
+            if (User.IsBot && User.BotData.AiType == "guide")
             {
-                RoomUser User = Users.Current;
-                if (User.IsBot && User.BotData.AiType == "guide")
-                {
-                    Session.GetMessageHandler().GetResponse().Init(33u);
-                    Session.GetMessageHandler().GetResponse().AppendInt32(4009);
-                    Session.GetMessageHandler().SendResponse();
-                    return;
-                }
+                Session.GetMessageHandler().GetResponse().Init(33u);
+                Session.GetMessageHandler().GetResponse().AppendInt32(4009);
+                Session.GetMessageHandler().SendResponse();
+                return;
             }
         }
-        if (Session.GetHabbo().CalledGuideBot)
+            /*
+            lock (Room.UserList)
+            {
+                List<RoomUser>.Enumerator Users = Room.UserList.GetEnumerator();
+                while (Users.MoveNext())
+                {
+                    RoomUser User = Users.Current;
+                    if (User.IsBot && User.BotData.AiType == "guide")
+                    {
+                        Session.GetMessageHandler().GetResponse().Init(33u);
+                        Session.GetMessageHandler().GetResponse().AppendInt32(4009);
+                        Session.GetMessageHandler().SendResponse();
+                        return;
+                    }
+                }
+            }*/
+
+            if (Session.GetHabbo().CalledGuideBot)
         {
             Session.GetMessageHandler().GetResponse().Init(33u);
             Session.GetMessageHandler().GetResponse().AppendInt32(4010);
@@ -1474,7 +1488,7 @@ internal class GameClientMessageHandler
             return;
         }
         int Junk = Request.PopWiredInt32();
-        Dictionary<int, int> Items = new Dictionary<int, int>();
+        ConcurrentDictionary<int, int> Items = new ConcurrentDictionary<int, int>();
         int Background = Request.PopWiredInt32();
         int TopLayer = Request.PopWiredInt32();
         int AmountOfItems = Request.PopWiredInt32();
@@ -1486,7 +1500,7 @@ internal class GameClientMessageHandler
             {
                 return;
             }
-            Items.Add(Pos, Item);
+            Items.TryAdd(Pos, Item);
         }
         if (Background < 1 || Background > 24 || TopLayer < 0 || TopLayer > 11)
         {
@@ -1538,7 +1552,7 @@ internal class GameClientMessageHandler
         int MaxUsers = Request.PopWiredInt32();
         int CategoryId = Request.PopWiredInt32();
         int TagCount = Request.PopWiredInt32();
-        List<string> Tags = new List<string>();
+        SynchronizedCollection<string> Tags = new SynchronizedCollection<string>();
         StringBuilder formattedTags = new StringBuilder();
         for (int i = 0; i < TagCount; i++)
         {
@@ -1914,7 +1928,7 @@ internal class GameClientMessageHandler
             string descr = HolographEnvironment.FilterInjectionChars(Request.PopFixedString());
             int tagCount = Request.PopWiredInt32();
             Room.Event = new RoomEvent(Room.RoomId, name, descr, category, null);
-            Room.Event.Tags = new List<string>();
+            Room.Event.Tags = new SynchronizedCollection<string>();
             for (int i = 0; i < tagCount; i++)
             {
                 Room.Event.Tags.Add(HolographEnvironment.FilterInjectionChars(Request.PopFixedString()));
@@ -1947,7 +1961,7 @@ internal class GameClientMessageHandler
             Room.Event.Category = category;
             Room.Event.Name = name;
             Room.Event.Description = descr;
-            Room.Event.Tags = new List<string>();
+            Room.Event.Tags = new SynchronizedCollection<string>();
             for (int i = 0; i < tagCount; i++)
             {
                 Room.Event.Tags.Add(HolographEnvironment.FilterInjectionChars(Request.PopFixedString()));
@@ -2404,7 +2418,8 @@ internal class GameClientMessageHandler
             return;
         }
         RoomItem Item = null;
-        foreach (RoomItem I in Room.Items)
+
+        foreach (RoomItem I in Room.Items.Values)
         {
             if (I.GetBaseItem().InteractionType.ToLower() == "dimmer")
             {
@@ -2439,7 +2454,7 @@ internal class GameClientMessageHandler
             return;
         }
         RoomItem Item = null;
-        foreach (RoomItem I in Room.Items)
+        foreach (RoomItem I in Room.Items.Values)
         {
             if (I.GetBaseItem().InteractionType.ToLower() == "dimmer")
             {

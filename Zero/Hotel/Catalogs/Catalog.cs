@@ -624,16 +624,15 @@ internal class Catalog
     public List<EcotronReward> GetEcotronRewardsForLevel(uint Level)
     {
         List<EcotronReward> Rewards = new List<EcotronReward>();
-        lock (EcotronRewards)
+
+        foreach (EcotronReward R in EcotronRewards)
         {
-            foreach (EcotronReward R in EcotronRewards)
+            if (R.RewardLevel == Level)
             {
-                if (R.RewardLevel == Level)
-                {
-                    Rewards.Add(R);
-                }
+                Rewards.Add(R);
             }
         }
+
         return Rewards;
     }
 
@@ -647,24 +646,23 @@ internal class Catalog
         Index.AppendStringWithBreak("");
         Index.AppendBoolean(Bool: false);
         Index.AppendInt32(GetTreeSize(Client, -1));
-        lock (Pages)
+
+        foreach (CatalogPage Page in Pages.Values)
         {
-            foreach (CatalogPage Page in Pages.Values)
+            if (Page.ParentId != -1)
             {
-                if (Page.ParentId != -1)
+                continue;
+            }
+            Page.Serialize(Client, Index);
+            foreach (CatalogPage _Page in Pages.Values)
+            {
+                if (_Page.ParentId == Page.PageId)
                 {
-                    continue;
-                }
-                Page.Serialize(Client, Index);
-                foreach (CatalogPage _Page in Pages.Values)
-                {
-                    if (_Page.ParentId == Page.PageId)
-                    {
-                        _Page.Serialize(Client, Index);
-                    }
+                    _Page.Serialize(Client, Index);
                 }
             }
         }
+
         return Index;
     }
 
@@ -773,13 +771,12 @@ internal class Catalog
         }
 
         PageData.AppendInt32(Page.Items.Count);
-        lock (Page.Items)
+
+        foreach (CatalogItem Item in Page.Items)
         {
-            foreach (CatalogItem Item in Page.Items)
-            {
-                Item.Serialize(PageData);
-            }
+            Item.Serialize(PageData);
         }
+
         return PageData;
     }
 
