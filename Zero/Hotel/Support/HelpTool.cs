@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Threading;
@@ -8,20 +10,20 @@ namespace Zero.Hotel.Support;
 
 internal class HelpTool
 {
-    public Dictionary<uint, HelpCategory> Categories;
+    public ConcurrentDictionary<uint, HelpCategory> Categories;
 
-    public Dictionary<uint, HelpTopic> Topics;
+    public ConcurrentDictionary<uint, HelpTopic> Topics;
 
-    public List<HelpTopic> ImportantTopics;
+    public SynchronizedCollection<HelpTopic> ImportantTopics;
 
-    public List<HelpTopic> KnownIssues;
+    public SynchronizedCollection<HelpTopic> KnownIssues;
 
     public HelpTool()
     {
-        Categories = new Dictionary<uint, HelpCategory>();
-        Topics = new Dictionary<uint, HelpTopic>();
-        ImportantTopics = new List<HelpTopic>();
-        KnownIssues = new List<HelpTopic>();
+        Categories = new ConcurrentDictionary<uint, HelpCategory>();
+        Topics = new ConcurrentDictionary<uint, HelpTopic>();
+        ImportantTopics = new SynchronizedCollection<HelpTopic>();
+        KnownIssues = new SynchronizedCollection<HelpTopic>();
     }
 
     public void LoadCategories()
@@ -38,7 +40,7 @@ internal class HelpTool
         }
         foreach (DataRow Row in CategoryData.Rows)
         {
-            Categories.Add((uint)Row["id"], new HelpCategory((uint)Row["id"], (string)Row["caption"]));
+            Categories.TryAdd((uint)Row["id"], new HelpCategory((uint)Row["id"], (string)Row["caption"]));
         }
     }
 
@@ -71,7 +73,7 @@ internal class HelpTool
         foreach (DataRow Row in TopicData.Rows)
         {
             HelpTopic NewTopic = new HelpTopic((uint)Row["id"], (string)Row["title"], (string)Row["body"], (uint)Row["subject"]);
-            Topics.Add((uint)Row["id"], NewTopic);
+            Topics.TryAdd((uint)Row["id"], NewTopic);
             switch (int.Parse(Row["known_issue"].ToString()))
             {
                 case 1:
@@ -120,42 +122,21 @@ internal class HelpTool
     {
         ServerMessage Frontpage = new ServerMessage(518u);
         Frontpage.AppendInt32(ImportantTopics.Count);
-        bool lockTaken = false;
-        List<HelpTopic> obj = default(List<HelpTopic>);
-        try
+
+        foreach (HelpTopic Topic in ImportantTopics)
         {
-            Monitor.Enter(obj = ImportantTopics, ref lockTaken);
-            foreach (HelpTopic Topic in ImportantTopics)
-            {
-                Frontpage.AppendUInt(Topic.TopicId);
-                Frontpage.AppendStringWithBreak(Topic.Caption);
-            }
+            Frontpage.AppendUInt(Topic.TopicId);
+            Frontpage.AppendStringWithBreak(Topic.Caption);
         }
-        finally
-        {
-            if (lockTaken)
-            {
-                Monitor.Exit(obj);
-            }
-        }
+
         Frontpage.AppendInt32(KnownIssues.Count);
-        bool lockTaken2 = false;
-        try
+
+        foreach (HelpTopic Topic in KnownIssues)
         {
-            Monitor.Enter(obj = KnownIssues, ref lockTaken2);
-            foreach (HelpTopic Topic in KnownIssues)
-            {
-                Frontpage.AppendUInt(Topic.TopicId);
-                Frontpage.AppendStringWithBreak(Topic.Caption);
-            }
+            Frontpage.AppendUInt(Topic.TopicId);
+            Frontpage.AppendStringWithBreak(Topic.Caption);
         }
-        finally
-        {
-            if (lockTaken2)
-            {
-                Monitor.Exit(obj);
-            }
-        }
+
         return Frontpage;
     }
 
@@ -163,15 +144,14 @@ internal class HelpTool
     {
         ServerMessage Index = new ServerMessage(519u);
         Index.AppendInt32(Categories.Count);
-        lock (Categories)
+
+        foreach (HelpCategory Category in Categories.Values)
         {
-            foreach (HelpCategory Category in Categories.Values)
-            {
-                Index.AppendUInt(Category.CategoryId);
-                Index.AppendStringWithBreak(Category.Caption);
-                Index.AppendInt32(ArticlesInCategory(Category.CategoryId));
-            }
+            Index.AppendUInt(Category.CategoryId);
+            Index.AppendStringWithBreak(Category.Caption);
+            Index.AppendInt32(ArticlesInCategory(Category.CategoryId));
         }
+
         return Index;
     }
 
@@ -212,17 +192,16 @@ internal class HelpTool
         Cat.AppendUInt(Category.CategoryId);
         Cat.AppendStringWithBreak("");
         Cat.AppendInt32(ArticlesInCategory(Category.CategoryId));
-        lock (Topics)
+
+        foreach (HelpTopic Topic in Topics.Values)
         {
-            foreach (HelpTopic Topic in Topics.Values)
+            if (Topic.CategoryId == Category.CategoryId)
             {
-                if (Topic.CategoryId == Category.CategoryId)
-                {
-                    Cat.AppendUInt(Topic.TopicId);
-                    Cat.AppendStringWithBreak(Topic.Caption);
-                }
+                Cat.AppendUInt(Topic.TopicId);
+                Cat.AppendStringWithBreak(Topic.Caption);
             }
         }
+
         return Cat;
     }
 }

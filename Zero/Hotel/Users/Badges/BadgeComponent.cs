@@ -7,7 +7,7 @@ namespace Zero.Hotel.Users.Badges;
 
 internal class BadgeComponent
 {
-    private List<Badge> Badges;
+    private SynchronizedCollection<Badge> Badges;
 
     private uint UserId;
 
@@ -18,8 +18,6 @@ internal class BadgeComponent
         get
         {
             int i = 0;
-            lock (Badges)
-            {
                 foreach (Badge Badge in Badges)
                 {
                     if (Badge.Slot > 0)
@@ -27,29 +25,25 @@ internal class BadgeComponent
                         i++;
                     }
                 }
-            }
             return i;
         }
     }
 
-    public List<Badge> BadgeList => Badges;
+    public SynchronizedCollection<Badge> BadgeList => Badges;
 
     public BadgeComponent(uint UserId)
     {
-        Badges = new List<Badge>();
+        Badges = new SynchronizedCollection<Badge>();
         this.UserId = UserId;
     }
 
     public Badge GetBadge(string Badge)
     {
-        lock (Badges)
+        foreach (Badge B in Badges)
         {
-            foreach (Badge B in Badges)
+            if (Badge.ToLower() == B.Code.ToLower())
             {
-                if (Badge.ToLower() == B.Code.ToLower())
-                {
-                    return B;
-                }
+                return B;
             }
         }
         return null;
@@ -94,13 +88,10 @@ internal class BadgeComponent
 
     public void ResetSlots()
     {
-        lock (Badges)
-        {
             foreach (Badge Badge in Badges)
             {
                 Badge.Slot = 0;
             }
-        }
     }
 
     public void RemoveBadge(string Badge)
@@ -135,11 +126,9 @@ internal class BadgeComponent
 
     public ServerMessage Serialize()
     {
-        List<Badge> EquippedBadges = new List<Badge>();
+        SynchronizedCollection<Badge> EquippedBadges = new SynchronizedCollection<Badge>();
         ServerMessage Message = new ServerMessage(229u);
         Message.AppendInt32(Count);
-        lock (Badges)
-        {
             foreach (Badge Badge in Badges)
             {
                 Message.AppendStringWithBreak(Badge.Code);
@@ -148,7 +137,6 @@ internal class BadgeComponent
                     EquippedBadges.Add(Badge);
                 }
             }
-        }
         Message.AppendInt32(EquippedBadges.Count);
         foreach (Badge Badge in EquippedBadges)
         {

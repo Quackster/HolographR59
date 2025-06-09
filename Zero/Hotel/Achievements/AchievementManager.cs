@@ -4,16 +4,17 @@ using Zero.Hotel.GameClients;
 using Zero.Hotel.Users.Badges;
 using Zero.Messages;
 using Zero.Storage;
+using System.Collections.Concurrent;
 
 namespace Zero.Hotel.Achievements;
 
 internal class AchievementManager
 {
-    public Dictionary<uint, Achievement> Achievements;
+    public ConcurrentDictionary<uint, Achievement> Achievements;
 
     public AchievementManager()
     {
-        Achievements = new Dictionary<uint, Achievement>();
+        Achievements = new ConcurrentDictionary<uint, Achievement>();
     }
 
     public void LoadAchievements()
@@ -30,7 +31,7 @@ internal class AchievementManager
         }
         foreach (DataRow Row in Data.Rows)
         {
-            Achievements.Add((uint)Row["id"], new Achievement((uint)Row["id"], (int)Row["levels"], (string)Row["badge"], (int)Row["pixels_base"], (double)Row["pixels_multiplier"], HolographEnvironment.EnumToBool(Row["dynamic_badgelevel"].ToString())));
+            Achievements.TryAdd((uint)Row["id"], new Achievement((uint)Row["id"], (int)Row["levels"], (string)Row["badge"], (int)Row["pixels_base"], (double)Row["pixels_multiplier"], HolographEnvironment.EnumToBool(Row["dynamic_badgelevel"].ToString())));
         }
     }
 
@@ -46,25 +47,27 @@ internal class AchievementManager
         }
         return false;
     }
-
     public ServerMessage SerializeAchievementList(GameClient Session)
     {
         List<Achievement> AchievementsToList = new List<Achievement>();
-        Dictionary<uint, int> NextAchievementLevels = new Dictionary<uint, int>();
-        lock (Achievements)
+        ConcurrentDictionary<uint, int> NextAchievementLevels = new ConcurrentDictionary<uint, int>();
+
+        foreach (Achievement Achievement in Achievements.Values)
         {
-            foreach (Achievement Achievement in Achievements.Values)
+            if (!Session.GetHabbo().Achievements.ContainsKey(Achievement.Id))
             {
-                if (!Session.GetHabbo().Achievements.ContainsKey(Achievement.Id))
+                AchievementsToList.Add(Achievement);
+                NextAchievementLevels.TryAdd(Achievement.Id, 1);
+            }
+            else
+            {
+                if (Session.GetHabbo().Achievements[Achievement.Id] >= Achievement.Levels)
                 {
-                    AchievementsToList.Add(Achievement);
-                    NextAchievementLevels.Add(Achievement.Id, 1);
+                    continue;
                 }
-                else if (Session.GetHabbo().Achievements[Achievement.Id] < Achievement.Levels)
-                {
-                    AchievementsToList.Add(Achievement);
-                    NextAchievementLevels.Add(Achievement.Id, Session.GetHabbo().Achievements[Achievement.Id] + 1);
-                }
+
+                AchievementsToList.Add(Achievement);
+                NextAchievementLevels.TryAdd(Achievement.Id, Session.GetHabbo().Achievements[Achievement.Id] + 1);
             }
         }
         ServerMessage Message = new ServerMessage(436u);
@@ -81,39 +84,55 @@ internal class AchievementManager
 
     public void UnlockAchievement(GameClient Session, uint AchievementId, int Level)
     {
+        // Get the achievement
         Achievement Achievement = Achievements[AchievementId];
+
+        // Make sure the achievement is valid and has not already been unlocked
         if (Achievement == null || UserHasAchievement(Session, Achievement.Id, Level) || Level < 1 || Level > Achievement.Levels)
         {
             return;
         }
+
+        // Calculate the pixel value for this achievement
         int Value = CalculateAchievementValue(Achievement.PixelBase, Achievement.PixelMultiplier, Level);
-        lock (Session.GetHabbo().GetBadgeComponent().BadgeList)
+
+        // Remove any previous badges for this achievement (old levels)
+        List<string> BadgesToRemove = new List<string>();
+
+        foreach (Badge Badge in Session.GetHabbo().GetBadgeComponent().BadgeList)
         {
-            List<string> BadgesToRemove = new List<string>();
-            foreach (Badge Badge in Session.GetHabbo().GetBadgeComponent().BadgeList)
+            if (Badge.Code.StartsWith(Achievement.BadgeCode))
             {
-                if (Badge.Code.StartsWith(Achievement.BadgeCode))
-                {
-                    BadgesToRemove.Add(Badge.Code);
-                }
-            }
-            foreach (string Badge2 in BadgesToRemove)
-            {
-                Session.GetHabbo().GetBadgeComponent().RemoveBadge(Badge2);
+                BadgesToRemove.Add(Badge.Code);
             }
         }
-        Session.GetHabbo().GetBadgeComponent().GiveBadge(FormatBadgeCode(Achievement.BadgeCode, Level, Achievement.DynamicBadgeLevel), InDatabase: true);
+
+        foreach (string Badge in BadgesToRemove)
+        {
+            Session.GetHabbo().GetBadgeComponent().RemoveBadge(Badge);
+        }
+
+        // Give the user the new badge
+        Session.GetHabbo().GetBadgeComponent().GiveBadge(FormatBadgeCode(Achievement.BadgeCode, Level, Achievement.DynamicBadgeLevel), true);
+
+        // Update or set the achievement level for the user
         if (Session.GetHabbo().Achievements.ContainsKey(Achievement.Id))
         {
             Session.GetHabbo().Achievements[Achievement.Id] = Level;
-            using DatabaseClient dbClient = HolographEnvironment.GetDatabase().GetClient();
-            dbClient.ExecuteQuery("Update user_achievements SET achievement_level = '" + Level + "' WHERE user_id = '" + Session.GetHabbo().Id + "' AND achievement_id = '" + Achievement.Id + "' LIMIT 1");
+
+            using (DatabaseClient dbClient = HolographEnvironment.GetDatabase().GetClient())
+            {
+                dbClient.ExecuteQuery("UPDATE user_achievements SET achievement_level = '" + Level + "' WHERE user_id = '" + Session.GetHabbo().Id + "' AND achievement_id = '" + Achievement.Id + "' LIMIT 1");
+            }
         }
         else
         {
-            Session.GetHabbo().Achievements.Add(Achievement.Id, Level);
-            using DatabaseClient dbClient = HolographEnvironment.GetDatabase().GetClient();
-            dbClient.ExecuteQuery("INSERT INTO user_achievements (user_id,achievement_id,achievement_level) VALUES ('" + Session.GetHabbo().Id + "','" + Achievement.Id + "','" + Level + "')");
+            Session.GetHabbo().Achievements.TryAdd(Achievement.Id, Level);
+
+            using (DatabaseClient dbClient = HolographEnvironment.GetDatabase().GetClient())
+            {
+                dbClient.ExecuteQuery("INSERT INTO user_achievements (user_id,achievement_id,achievement_level) VALUES ('" + Session.GetHabbo().Id + "','" + Achievement.Id + "','" + Level + "')");
+            }
         }
         Session.GetMessageHandler().GetResponse().Init(437u);
         Session.GetMessageHandler().GetResponse().AppendUInt(Achievement.Id);

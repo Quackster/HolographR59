@@ -23,7 +23,7 @@ internal class ChatCommandHandler
         {
             switch (Params[0].ToLower())
             {
-                case "dormir":
+                case "afk":
                     if (Session.GetHabbo().Rank >= 1)
                     {
                         TargetRoom = HolographEnvironment.GetGame().GetRoomManager().GetRoom(Session.GetHabbo().CurrentRoomId);
@@ -134,19 +134,19 @@ internal class ChatCommandHandler
 
                 case "pickall":
                     TargetRoom = HolographEnvironment.GetGame().GetRoomManager().GetRoom(Session.GetHabbo().CurrentRoomId);
-                    if (TargetRoom != null && TargetRoom.CheckRights(Session, RequireOwnership: true))
+
+                    if (TargetRoom != null && TargetRoom.CheckRights(Session, true))
                     {
                         List<RoomItem> ToRemove = new List<RoomItem>();
-                        lock (TargetRoom.Items)
-                        {
-                            ToRemove.AddRange(TargetRoom.Items);
-                        }
+                        ToRemove.AddRange(TargetRoom.Items.Values);
+
                         foreach (RoomItem Item in ToRemove)
                         {
                             TargetRoom.RemoveFurniture(Session, Item.Id);
                             Session.GetHabbo().GetInventoryComponent().AddItem(Item.Id, Item.BaseItem, Item.ExtraData);
                         }
-                        Session.GetHabbo().GetInventoryComponent().UpdateItems(FromDatabase: true);
+
+                        Session.GetHabbo().GetInventoryComponent().UpdateItems(true);
                         return true;
                     }
                     return false;
@@ -161,27 +161,11 @@ internal class ChatCommandHandler
                     Session.SendNotif("You unlocked the swim effect! Go to Effects and use it :D");
                     return true;
 
-                case "tin":
-                    {
-                        using (DatabaseClient dbClient = HolographEnvironment.GetDatabase().GetClient())
-                        {
-                            dbClient.ExecuteQuery("TRUNCATE TABLE users_items");
-                        }
-                        return true;
-                    }
-                case "chat":
-                    {
-                        using (DatabaseClient dbClient = HolographEnvironment.GetDatabase().GetClient())
-                        {
-                            dbClient.ExecuteQuery("TRUNCATE TABLE chatlogs");
-                        }
-                        return true;
-                    }
                 case "empty":
                 case "clean":
                 case "clear":
                     Session.GetHabbo().GetInventoryComponent().ClearItems();
-                    Session.SendNotif("Your hand is now clean! :D");
+                    Session.SendNotif("Your inventory was cleared.");
                     return true;
 
                 case "survey": // originally "pesquisa"

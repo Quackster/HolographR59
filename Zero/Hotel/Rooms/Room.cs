@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Timers;
 using Zero.Core;
 using Zero.Hotel.GameClients;
 using Zero.Hotel.Items;
@@ -42,7 +45,7 @@ internal class Room
 
     public int Score;
 
-    public List<string> Tags;
+    public SynchronizedCollection<string> Tags;
 
     public bool AllowPets;
 
@@ -54,7 +57,7 @@ internal class Room
 
     private StringBuilder mRollerBroadcast = new StringBuilder();
 
-    public List<RoomUser> UserList;
+    public SynchronizedCollection<RoomUser> UserList;
 
     public int UserCounter = 0;
 
@@ -62,9 +65,9 @@ internal class Room
 
     public RoomIcon myIcon;
 
-    public List<uint> UsersWithRights;
 
-    private Dictionary<uint, double> Bans;
+    public SynchronizedCollection<uint> UsersWithRights;
+    private ConcurrentDictionary<uint, Double> Bans;
 
     public List<uint> HasWaterEffect;
 
@@ -80,11 +83,11 @@ internal class Room
 
     public string Landscape;
 
-    public List<RoomItem> Items;
+    public ConcurrentDictionary<uint, RoomItem> Items;
 
     public MoodlightData MoodlightData;
 
-    public List<Trade> ActiveTrades;
+    public SynchronizedCollection<Trade> ActiveTrades;
 
     public bool KeepAlive;
 
@@ -106,6 +109,7 @@ internal class Room
 
     public double[,] TopStackHeight;
 
+    private System.Timers.Timer Task;
     public bool HasOngoingEvent
     {
         get
@@ -135,13 +139,17 @@ internal class Room
         get
         {
             int i = 0;
+
             foreach (RoomUser User in UserList)
             {
-                if (!User.IsBot)
+                if (User.IsBot)
                 {
-                    i++;
+                    continue;
                 }
+
+                i++;
             }
+
             return i;
         }
     }
@@ -157,13 +165,17 @@ internal class Room
         get
         {
             List<RoomItem> FloorItems = new List<RoomItem>();
-            foreach (RoomItem Item in Items)
+
+            foreach (RoomItem Item in Items.Values)
             {
-                if (Item.IsFloorItem)
+                if (!Item.IsFloorItem)
                 {
-                    FloorItems.Add(Item);
+                    continue;
                 }
+
+                FloorItems.Add(Item);
             }
+
             return FloorItems;
         }
     }
@@ -173,16 +185,21 @@ internal class Room
         get
         {
             List<RoomItem> WallItems = new List<RoomItem>();
-            foreach (RoomItem Item in Items)
+
+            foreach (RoomItem Item in Items.Values)
             {
-                if (Item.IsWallItem)
+                if (!Item.IsWallItem)
                 {
-                    WallItems.Add(Item);
+                    continue;
                 }
+
+                WallItems.Add(Item);
             }
+
             return WallItems;
         }
     }
+
 
     public bool CanTradeInRoom
     {
@@ -212,20 +229,26 @@ internal class Room
     {
         get
         {
-            int c = 0;
-            List<RoomUser>.Enumerator Users = UserList.GetEnumerator();
-            while (Users.MoveNext())
-            {
-                if (Users.Current.IsPet)
+            /*int c = 0;
+
+                ConcurrentDictionary<RoomUser>.Enumerator Users = this.UserList.GetEnumerator();
+
+                while (Users.MoveNext())
                 {
-                    c++;
+                    if (Users.Current.IsPet)
+                    {
+                        c++;
+                    }
                 }
             }
-            return c;
+
+            return c;*/
+
+            return this.UserList.Count(x => x.IsPet);
         }
     }
 
-    public Room(uint Id, string Name, string Description, string Type, string Owner, int Category, int State, int UsersMax, string ModelName, string CCTs, int Score, List<string> Tags, bool AllowPets, bool AllowPetsEating, bool AllowWalkthrough, bool Hidewall, RoomIcon Icon, string Password, string Wallpaper, string Floor, string Landscape)
+    public Room(uint Id, string Name, string Description, string Type, string Owner, int Category, int State, int UsersMax, string ModelName, string CCTs, int Score, SynchronizedCollection<string> Tags, bool AllowPets, bool AllowPetsEating, bool AllowWalkthrough, bool Hidewall, RoomIcon Icon, string Password, string Wallpaper, string Floor, string Landscape)
     {
         this.Id = Id;
         this.Name = Name;
@@ -245,16 +268,16 @@ internal class Room
         this.AllowWalkthrough = AllowWalkthrough;
         this.Hidewall = Hidewall;
         UserCounter = 0;
-        UserList = new List<RoomUser>();
+        UserList = new SynchronizedCollection<RoomUser>();
         myIcon = Icon;
         this.Password = Password;
-        Bans = new Dictionary<uint, double>();
+        Bans = new ConcurrentDictionary<uint, double>();
         Event = null;
         this.Wallpaper = Wallpaper;
         this.Floor = Floor;
         this.Landscape = Landscape;
-        Items = new List<RoomItem>();
-        ActiveTrades = new List<Trade>();
+        Items = new ConcurrentDictionary<uint, RoomItem>();
+        ActiveTrades = new SynchronizedCollection<Trade>();
         UserMatrix = new bool[Model.MapSizeX, Model.MapSizeY];
         HasBlueBattleBallEffect = new List<uint>();
         HasYellowBattleBallEffect = new List<uint>();
@@ -270,6 +293,31 @@ internal class Room
         GenerateMaps();
     }
 
+    public void StartProcessRoutine()
+        {
+            if (Task != null)
+            {
+                return;
+            }
+
+            Task = new System.Timers.Timer();
+            Task.Interval = 500;
+            Task.Elapsed += ProcessRoom;
+            Task.Enabled = true;
+            Task.Start();
+        }
+
+        public void StopProcessRoutine()
+    {
+        if (Task == null)
+        {
+            return;
+        }
+
+        Task.Dispose();
+        Task = null;
+    }
+
     public void InitBots()
     {
         List<RoomBot> Bots = HolographEnvironment.GetGame().GetBotManager().GetBotsForRoom(RoomId);
@@ -281,7 +329,7 @@ internal class Room
 
     public void InitPets()
     {
-        List<Pet> Pets = new List<Pet>();
+        //List<Pet> Pets = new List<Pet>();
         DataTable Data = null;
         using (DatabaseClient dbClient = HolographEnvironment.GetDatabase().GetClient())
         {
@@ -361,46 +409,61 @@ internal class Room
     {
         foreach (RoomUser Usr in UserList)
         {
-            if (Usr.IsBot)
+            if (!Usr.IsBot)
             {
-                if (Shout)
-                {
-                    Usr.BotAI.OnUserShout(User, Message);
-                }
-                else
-                {
-                    Usr.BotAI.OnUserSay(User, Message);
-                }
+                continue;
+            }
+
+            if (Shout)
+            {
+                Usr.BotAI.OnUserShout(User, Message);
+            }
+            else
+            {
+                Usr.BotAI.OnUserSay(User, Message);
             }
         }
     }
 
+
     public void RegenerateUserMatrix()
     {
-        UserMatrix = new bool[Model.MapSizeX, Model.MapSizeY];
-        List<RoomUser>.Enumerator eUsers = UserList.GetEnumerator();
+        this.UserMatrix = new bool[Model.MapSizeX, Model.MapSizeY];
+
+        foreach (RoomUser User in this.UserList)
+        {
+            this.UserMatrix[User.X, User.Y] = true;
+        }
+
+        /*
+        ConcurrentDictionary<RoomUser>.Enumerator eUsers = this.UserList.GetEnumerator();
+
         while (eUsers.MoveNext())
         {
             RoomUser User = eUsers.Current;
-            UserMatrix[User.X, User.Y] = true;
+            this.UserMatrix[User.X, User.Y] = true;
         }
+        */
     }
 
     public void GenerateMaps()
     {
+        // Create matrix arrays
         Matrix = new MatrixState[Model.MapSizeX, Model.MapSizeY];
         BedMatrix = new Coord[Model.MapSizeX, Model.MapSizeY];
         HeightMatrix = new double[Model.MapSizeX, Model.MapSizeY];
         TopStackHeight = new double[Model.MapSizeX, Model.MapSizeY];
+
+        // Fill in the basic data based purely on the heightmap
         for (int line = 0; line < Model.MapSizeY; line++)
         {
             for (int chr = 0; chr < Model.MapSizeX; chr++)
             {
                 Matrix[chr, line] = MatrixState.BLOCKED;
-                ref Coord reference = ref BedMatrix[chr, line];
-                reference = new Coord(chr, line);
-                HeightMatrix[chr, line] = 0.0;
+                BedMatrix[chr, line] = new Coord(chr, line);
+                HeightMatrix[chr, line] = 0;
                 TopStackHeight[chr, line] = 0.0;
+
                 if (chr == Model.DoorX && line == Model.DoorY)
                 {
                     Matrix[chr, line] = MatrixState.WALKABLE_LASTSTEP;
@@ -415,67 +478,95 @@ internal class Room
                 }
             }
         }
-        foreach (RoomItem Item in Items)
+
+        // Loop through the items in the room
+        foreach (RoomItem Item in Items.Values)
         {
-            if (Item.GetBaseItem().Type.ToLower() != "s" || Item.GetBaseItem().Height <= 0.0)
+            // If we're dealing with anything other than a floor item, skip
+            if (Item.GetBaseItem().Type.ToLower() != "s")
             {
                 continue;
             }
+
+            // If this is a rug, ignore it.
+            if (Item.GetBaseItem().Height <= 0)
+            {
+                continue;
+            }
+
+            // Make sure we're the highest item here!
             if (TopStackHeight[Item.X, Item.Y] <= Item.Z)
             {
                 TopStackHeight[Item.X, Item.Y] = Item.Z;
+
+                // If this item is walkable and on the floor, allow users to walk here.
                 if (Item.GetBaseItem().Walkable)
                 {
                     Matrix[Item.X, Item.Y] = MatrixState.WALKABLE;
                     HeightMatrix[Item.X, Item.Y] = Item.GetBaseItem().Height;
                 }
-                else if (Item.Z <= Model.SqFloorHeight[Item.X, Item.Y] + 0.1 && Item.GetBaseItem().InteractionType.ToLower() == "gate" && Item.ExtraData == "1")
+                // If this item is a gate, open, and on the floor, allow users to walk here.
+                else if (Item.Z <= (Model.SqFloorHeight[Item.X, Item.Y] + 0.1) && Item.GetBaseItem().InteractionType.ToLower() == "gate" && Item.ExtraData == "1")
                 {
                     Matrix[Item.X, Item.Y] = MatrixState.WALKABLE;
                 }
+                // If this item is a set or a bed, make it's square walkable (but only if last step)
                 else if (Item.GetBaseItem().IsSeat || Item.GetBaseItem().InteractionType.ToLower() == "bed")
                 {
                     Matrix[Item.X, Item.Y] = MatrixState.WALKABLE_LASTSTEP;
                 }
+                // Finally, if it's none of those, block the square.
                 else
                 {
                     Matrix[Item.X, Item.Y] = MatrixState.BLOCKED;
                 }
             }
+
             Dictionary<int, AffectedTile> Points = GetAffectedTiles(Item.GetBaseItem().Length, Item.GetBaseItem().Width, Item.X, Item.Y, Item.Rot);
+
             if (Points == null)
             {
                 Points = new Dictionary<int, AffectedTile>();
             }
+
             foreach (AffectedTile Tile in Points.Values)
             {
+                // Make sure we're the highest item here!
                 if (TopStackHeight[Tile.X, Tile.Y] <= Item.Z)
                 {
                     TopStackHeight[Tile.X, Tile.Y] = Item.Z;
+
+                    // If this item is walkable and on the floor, allow users to walk here.
                     if (Item.GetBaseItem().Walkable)
                     {
                         Matrix[Tile.X, Tile.Y] = MatrixState.WALKABLE;
                         HeightMatrix[Tile.X, Tile.Y] = Item.GetBaseItem().Height;
                     }
-                    else if (Item.Z <= Model.SqFloorHeight[Item.X, Item.Y] + 0.1 && Item.GetBaseItem().InteractionType.ToLower() == "gate" && Item.ExtraData == "1")
+                    // If this item is a gate, open, and on the floor, allow users to walk here.
+                    else if (Item.Z <= (Model.SqFloorHeight[Item.X, Item.Y] + 0.1) && Item.GetBaseItem().InteractionType.ToLower() == "gate" && Item.ExtraData == "1")
                     {
                         Matrix[Tile.X, Tile.Y] = MatrixState.WALKABLE;
                     }
+                    // If this item is a set or a bed, make it's square walkable (but only if last step)
                     else if (Item.GetBaseItem().IsSeat || Item.GetBaseItem().InteractionType.ToLower() == "bed")
                     {
                         Matrix[Tile.X, Tile.Y] = MatrixState.WALKABLE_LASTSTEP;
                     }
+                    // Finally, if it's none of those, block the square.
                     else
                     {
                         Matrix[Tile.X, Tile.Y] = MatrixState.BLOCKED;
                     }
                 }
+
+                // Set bad maps
                 if (Item.GetBaseItem().InteractionType.ToLower() == "bed")
                 {
                     if (Item.Rot == 0 || Item.Rot == 4)
                     {
                         BedMatrix[Tile.X, Tile.Y].y = Item.Y;
                     }
+
                     if (Item.Rot == 2 || Item.Rot == 6)
                     {
                         BedMatrix[Tile.X, Tile.Y].x = Item.X;
@@ -487,7 +578,7 @@ internal class Room
 
     public void LoadRights()
     {
-        UsersWithRights = new List<uint>();
+        UsersWithRights = new SynchronizedCollection<uint>();
         DataTable Data = null;
         using (DatabaseClient dbClient = HolographEnvironment.GetDatabase().GetClient())
         {
@@ -523,7 +614,7 @@ internal class Room
             {
                 MoodlightData = new MoodlightData(Item.Id);
             }
-            Items.Add(Item);
+            this.Items.TryAdd(Item.Id, Item);
         }
     }
 
@@ -558,13 +649,14 @@ internal class Room
 
     public RoomItem GetItem(uint Id)
     {
-        foreach (RoomItem Item in Items)
+        foreach (RoomItem Item in Items.Values)
         {
             if (Item.Id == Id)
             {
                 return Item;
             }
         }
+
         return null;
     }
 
@@ -590,7 +682,7 @@ internal class Room
                 Message.AppendBoolean(Bool: false);
                 SendMessage(Message);
             }
-            Items.Remove(Item);
+            Items.TryRemove(Item.Id, out var _);
             using (DatabaseClient dbClient = HolographEnvironment.GetDatabase().GetClient())
             {
                 dbClient.ExecuteQuery("DELETE FROM room_items WHERE id = '" + Id + "' AND room_id = '" + RoomId + "' LIMIT 1");
@@ -621,76 +713,111 @@ internal class Room
         return true;
     }
 
-    public void ProcessRoom()
+    public void ProcessRoom(object sender, ElapsedEventArgs e)
     {
         int i = 0;
-        List<RoomItem>.Enumerator eItems = Items.GetEnumerator();
-        while (eItems.MoveNext())
+
+        if (!KeepAlive)
         {
-            try
+            // Don't bother processing a room if it should be DEAD! - Quackster
+            return;
+        }
+
+        // Loop through all furni and process them if they want to be processed
+        foreach (RoomItem Item in Items.Values)
+        {
+
+            if (!Item.UpdateNeeded)
+            {
+                continue;
+            }
+
+            Item.ProcessUpdates();
+        }
+
+        /*badlock (this.Items)
+        {
+            ConcurrentDictionary<RoomItem>.Enumerator eItems = this.Items.GetEnumerator();
+
+            while (eItems.MoveNext())
             {
                 RoomItem Item = eItems.Current;
-                if (Item.UpdateNeeded)
+
+                if (!Item.UpdateNeeded)
                 {
-                    Item.ProcessUpdates();
+                    continue;
                 }
+
+                Item.ProcessUpdates();
             }
-            catch (NullReferenceException ex)
-            {
-                HolographEnvironment.GetLogging().WriteLine("NullReferenceException at ProcessRoom: " + ex.ToString(), LogLevel.Error);
-            }
-        }
+        }*/
+
+        // Loop through all users and bots and process them
         List<uint> ToRemove = new List<uint>();
-        List<RoomUser>.Enumerator eUsers = UserList.GetEnumerator();
-        while (eUsers.MoveNext())
+
+        foreach (RoomUser User in UserList)
         {
-            RoomUser User = eUsers.Current;
             User.IdleTime++;
+
             if (!User.IsAsleep && User.IdleTime >= 600)
             {
                 User.IsAsleep = true;
-                ServerMessage FallAsleep = new ServerMessage(486u);
+
+                ServerMessage FallAsleep = new ServerMessage(486);
                 FallAsleep.AppendInt32(User.VirtualId);
-                FallAsleep.AppendBoolean(Bool: true);
+                FallAsleep.AppendBoolean(true);
                 SendMessage(FallAsleep);
             }
+
             if (User.NeedsAutokick && !ToRemove.Contains(User.HabboId))
             {
                 ToRemove.Add(User.HabboId);
             }
+
             if (User.CarryItemID > 0)
             {
                 User.CarryTimer--;
+
                 if (User.CarryTimer <= 0)
                 {
                     User.CarryItem(0);
                 }
             }
+
             bool invalidSetStep = false;
+
             if (User.SetStep)
             {
-                if (CanWalk(User.SetX, User.SetY, 0.0, LastStep: true) || User.AllowOverride || AllowWalkthrough)
+                if (CanWalk(User.SetX, User.SetY, 0, true) || User.AllowOverride)
                 {
                     UserMatrix[User.X, User.Y] = false;
+
                     User.X = User.SetX;
                     User.Y = User.SetY;
                     User.Z = User.SetZ;
+
                     UserMatrix[User.X, User.Y] = true;
+
                     UpdateUserStatus(User);
                 }
                 else
                 {
                     invalidSetStep = true;
                 }
+
                 User.SetStep = false;
             }
+
             if (User.PathRecalcNeeded)
             {
                 Pathfinder Pathfinder = new Pathfinder(this, User);
+
                 User.GoalX = User.PathRecalcX;
                 User.GoalY = User.PathRecalcY;
+
                 User.Path.Clear();
                 User.Path = Pathfinder.FindPath();
+
                 if (User.Path.Count > 1)
                 {
                     User.PathStep = 1;
@@ -703,40 +830,54 @@ internal class Room
                     User.Path.Clear();
                 }
             }
+
             if (User.IsWalking)
             {
-                if (invalidSetStep || User.PathStep >= User.Path.Count || (User.GoalX == User.X && User.Y == User.GoalY))
+                if (invalidSetStep || User.PathStep >= User.Path.Count || User.GoalX == User.X && User.Y == User.GoalY)
                 {
                     User.Path.Clear();
                     User.IsWalking = false;
                     User.RemoveStatus("mv");
                     User.PathRecalcNeeded = false;
+
                     if (User.X == Model.DoorX && User.Y == Model.DoorY && !ToRemove.Contains(User.HabboId) && !User.IsBot)
                     {
                         ToRemove.Add(User.HabboId);
                     }
+
                     UpdateUserStatus(User);
                 }
                 else
                 {
-                    int k = User.Path.Count - User.PathStep - 1;
+                    int k = (User.Path.Count - User.PathStep) - 1;
                     Coord NextStep = User.Path[k];
                     User.PathStep++;
+
                     int nextX = NextStep.x;
                     int nextY = NextStep.y;
+
                     User.RemoveStatus("mv");
+
                     bool LastStep = false;
+
                     if (nextX == User.GoalX && nextY == User.GoalY)
                     {
                         LastStep = true;
                     }
-                    if (CanWalk(nextX, nextY, 0.0, LastStep) || User.AllowOverride)
+
+                    if (CanWalk(nextX, nextY, 0, LastStep) || User.AllowOverride)
                     {
                         double nextZ = SqAbsoluteHeight(nextX, nextY);
-                        User.Statusses.Remove("lay");
-                        User.Statusses.Remove("sit");
+
+                        User.Statusses.Remove("lay", out var _);
+                        User.Statusses.Remove("sit", out var _);
                         User.AddStatus("mv", nextX + "," + nextY + "," + nextZ.ToString().Replace(',', '.'));
-                        User.RotHead = (User.RotBody = Rotation.Calculate(User.X, User.Y, nextX, nextY));
+
+                        int newRot = Rotation.Calculate(User.X, User.Y, nextX, nextY);
+
+                        User.RotBody = newRot;
+                        User.RotHead = newRot;
+
                         User.SetStep = true;
                         User.SetX = BedMatrix[nextX, nextY].x;
                         User.SetY = BedMatrix[nextX, nextY].y;
@@ -747,39 +888,221 @@ internal class Room
                         User.IsWalking = false;
                     }
                 }
+
                 User.UpdateNeeded = true;
             }
-            else if (User.Statusses.ContainsKey("mv"))
+            else
             {
-                User.RemoveStatus("mv");
-                User.UpdateNeeded = true;
+                if (User.Statusses.ContainsKey("mv"))
+                {
+                    User.RemoveStatus("mv");
+                    User.UpdateNeeded = true;
+                }
             }
+
             if (User.IsBot)
             {
                 User.BotAI.OnTimerTick();
             }
             else
             {
-                i++;
+                i++; // we do not count bots. we do not take kindly to their kind 'round 'ere.
             }
         }
+
         foreach (uint toRemove in ToRemove)
         {
-            RemoveUserFromRoom(HolographEnvironment.GetGame().GetClientManager().GetClientByHabbo(toRemove), NotifyClient: true, NotifyKick: false);
+            RemoveUserFromRoom(HolographEnvironment.GetGame().GetClientManager().GetClientByHabbo(toRemove), true, false);
         }
+
+        /*
+        badlock (this.UserList)
+        {
+            Dictionary<uint> ToRemove = new Dictionary<uint>();
+            ConcurrentDictionary<RoomUser>.Enumerator eUsers = this.UserList.GetEnumerator();
+
+            while (eUsers.MoveNext())
+            {
+                RoomUser User = eUsers.Current;
+
+                User.IdleTime++;
+
+                if (!User.IsAsleep && User.IdleTime >= 600)
+                {
+                    User.IsAsleep = true;
+
+                    ServerMessage FallAsleep = new ServerMessage(486);
+                    FallAsleep.AppendInt32(User.VirtualId);
+                    FallAsleep.AppendBoolean(true);
+                    SendMessage(FallAsleep);
+                }
+
+                if (User.NeedsAutokick && !ToRemove.Contains(User.HabboId))
+                {
+                    ToRemove.Add(User.HabboId);
+                }
+
+                if (User.CarryItemID > 0)
+                {
+                    User.CarryTimer--;
+
+                    if (User.CarryTimer <= 0)
+                    {
+                        User.CarryItem(0);
+                    }
+                }
+
+                bool invalidSetStep = false;
+
+                if (User.SetStep)
+                {
+                    if (CanWalk(User.SetX, User.SetY, 0, true) || User.AllowOverride)
+                    {
+                        UserMatrix[User.X, User.Y] = false;
+
+                        User.X = User.SetX;
+                        User.Y = User.SetY;
+                        User.Z = User.SetZ;
+
+                        UserMatrix[User.X, User.Y] = true;
+
+                        UpdateUserStatus(User);
+                    }
+                    else
+                    {
+                        invalidSetStep = true;
+                    }
+
+                    User.SetStep = false;
+                }
+
+                if (User.PathRecalcNeeded)
+                {
+                    Pathfinder Pathfinder = new Pathfinder(this, User);
+
+                    User.GoalX = User.PathRecalcX;
+                    User.GoalY = User.PathRecalcY;
+
+                    User.Path.Clear();
+                    User.Path = Pathfinder.FindPath();
+
+                    if (User.Path.Count > 1)
+                    {
+                        User.PathStep = 1;
+                        User.IsWalking = true;
+                        User.PathRecalcNeeded = false;
+                    }
+                    else
+                    {
+                        User.PathRecalcNeeded = false;
+                        User.Path.Clear();
+                    }
+                }
+
+                if (User.IsWalking)
+                {
+                    if (invalidSetStep || User.PathStep >= User.Path.Count || User.GoalX == User.X && User.Y == User.GoalY)
+                    {
+                        User.Path.Clear();
+                        User.IsWalking = false;
+                        User.RemoveStatus("mv");
+                        User.PathRecalcNeeded = false;
+
+                        if (User.X == Model.DoorX && User.Y == Model.DoorY && !ToRemove.Contains(User.HabboId) && !User.IsBot)
+                        {
+                            ToRemove.Add(User.HabboId);
+                        }
+
+                        UpdateUserStatus(User);
+                    }
+                    else
+                    {
+                        int k = (User.Path.Count - User.PathStep) - 1;
+                        Coord NextStep = User.Path[k];
+                        User.PathStep++;
+
+                        int nextX = NextStep.x;
+                        int nextY = NextStep.y;
+
+                        User.RemoveStatus("mv");
+
+                        bool LastStep = false;
+
+                        if (nextX == User.GoalX && nextY == User.GoalY)
+                        {
+                            LastStep = true;
+                        }
+
+                        if (CanWalk(nextX, nextY, 0, LastStep) || User.AllowOverride)
+                        {
+                            double nextZ = SqAbsoluteHeight(nextX, nextY);
+
+                            User.Statusses.TryRemove("lay", out var _);
+                            User.Statusses.TryRemove("sit", out var _);
+                            User.AddStatus("mv", nextX + "," + nextY + "," + nextZ.ToString().Replace(',','.'));
+
+                            int newRot = Rotation.Calculate(User.X, User.Y, nextX, nextY);
+
+                            User.RotBody = newRot;
+                            User.RotHead = newRot;
+
+                            User.SetStep = true;
+                            User.SetX = BedMatrix[nextX, nextY].x;
+                            User.SetY = BedMatrix[nextX, nextY].y;
+                            User.SetZ = nextZ;
+                        }
+                        else
+                        {
+                            User.IsWalking = false;
+                        }
+                    }
+
+                    User.UpdateNeeded = true;
+                }
+                else
+                {
+                    if (User.Statusses.ContainsKey("mv"))
+                    {
+                        User.RemoveStatus("mv");
+                        User.UpdateNeeded = true;
+                    }
+                }
+
+                if (User.IsBot) 
+                {
+                    User.BotAI.OnTimerTick();
+                }
+                else
+                {
+                    i++; // we do not count bots. we do not take kindly to their kind 'round 'ere.
+                }
+            }
+
+            foreach (uint toRemove in ToRemove)
+            {
+                RemoveUserFromRoom(HolographEnvironment.GetGame().GetClientManager().GetClientByHabbo(toRemove), true, false);
+            }
+        }
+        */
+        // Update idle time
         if (i >= 1)
         {
-            IdleTime = 0;
+            this.IdleTime = 0;
         }
         else
         {
-            IdleTime++;
+            this.IdleTime++;
         }
-        if (IdleTime >= 60)
+
+        // If room has been idle for a while
+        if (this.IdleTime >= 60)
         {
+            HolographEnvironment.GetLogging().WriteLine("[RoomMgr] Requesting unload of idle room - ID#: " + Id);
             HolographEnvironment.GetGame().GetRoomManager().RequestRoomUnload(Id);
         }
-        ServerMessage Updates = SerializeStatusUpdates(All: false);
+
+        ServerMessage Updates = SerializeStatusUpdates(false);
+
         if (Updates != null)
         {
             SendMessage(Updates);
@@ -893,23 +1216,30 @@ internal class Room
             if (!User.IsSpectator)
             {
                 UpdateUserCount();
+
                 List<RoomUser> Bots = new List<RoomUser>();
+
                 foreach (RoomUser Usr in UserList)
                 {
-                    if (Usr.IsBot)
+                    if (!Usr.IsBot)
                     {
-                        Bots.Add(Usr);
+                        continue;
                     }
+
+                    Bots.Add(Usr);
                 }
+
                 foreach (RoomUser Bot in Bots)
                 {
                     Bot.BotAI.OnUserLeaveRoom(Session);
-                    if (Bot.IsPet && Bot.PetData.OwnerId == Session.GetHabbo().Id && !CheckRights(Session, RequireOwnership: true))
+
+                    if (Bot.IsPet && Bot.PetData.OwnerId == Session.GetHabbo().Id && !CheckRights(Session, true))
                     {
                         PetsToRemove.Add(Bot);
                     }
                 }
             }
+
             foreach (RoomUser toRemove in PetsToRemove)
             {
                 Session.GetHabbo().GetInventoryComponent().AddPet(toRemove.PetData);
@@ -924,17 +1254,32 @@ internal class Room
 
     public RoomUser GetPet(uint PetId)
     {
-        List<RoomUser>.Enumerator Users = UserList.GetEnumerator();
-        while (Users.MoveNext())
+        foreach (RoomUser User in this.UserList)
         {
-            RoomUser User = Users.Current;
             if (User.IsBot && User.IsPet && User.PetData != null && User.PetData.PetId == PetId)
             {
                 return User;
             }
         }
+        /*
+        badlock (this.UserList)
+        {
+            ConcurrentDictionary<RoomUser>.Enumerator Users = this.UserList.GetEnumerator();
+
+            while (Users.MoveNext())
+            {
+                RoomUser User = Users.Current;
+
+                if (User.IsBot && User.IsPet && User.PetData != null && User.PetData.PetId == PetId)
+                {
+                    return User;
+                }
+            }
+        }*/
+
         return null;
     }
+
 
     public bool RoomContainsPet(uint PetId)
     {
@@ -1057,12 +1402,12 @@ internal class Room
 
     public void RemoveBan(uint Id)
     {
-        Bans.Remove(Id);
+        Bans.TryRemove(Id, out var _);
     }
 
     public void AddBan(uint Id)
     {
-        Bans.Add(Id, HolographEnvironment.GetUnixTimestamp());
+        Bans.TryAdd(Id, HolographEnvironment.GetUnixTimestamp());
     }
 
     public bool HasBanExpired(uint Id)
@@ -1082,7 +1427,7 @@ internal class Room
     public int ItemCountByType(string InteractionType)
     {
         int i = 0;
-        foreach (RoomItem Item in Items)
+        foreach (RoomItem Item in Items.Values)
         {
             if (Item.GetBaseItem().InteractionType.ToLower() == InteractionType.ToLower())
             {
@@ -1248,7 +1593,7 @@ internal class Room
                 dbClient.AddParamWithValue("extra_data", Item.ExtraData);
                 dbClient.ExecuteQuery("INSERT INTO room_items (id,room_id,base_item,extra_data,x,y,z,rot,wall_pos) VALUES ('" + Item.Id + "','" + RoomId + "','" + Item.BaseItem + "',@extra_data,'" + Item.X + "','" + Item.Y + "','" + Item.Z + "','" + Item.Rot + "','')");
             }
-            Items.Add(Item);
+            Items.TryAdd(Item.Id, Item);
             ServerMessage Message = new ServerMessage(93u);
             Item.Serialize(Message);
             SendMessage(Message);
@@ -1282,7 +1627,7 @@ internal class Room
             dbClient.AddParamWithValue("extra_data", Item.ExtraData);
             dbClient.ExecuteQuery("INSERT INTO room_items (id,room_id,base_item,extra_data,x,y,z,rot,wall_pos) VALUES ('" + Item.Id + "','" + RoomId + "','" + Item.BaseItem + "',@extra_data,'0','0','0','0','" + Item.WallPos + "')");
         }
-        Items.Add(Item);
+        Items.TryAdd(Item.Id, Item);
         ServerMessage Message = new ServerMessage(83u);
         Item.Serialize(Message);
         SendMessage(Message);
@@ -1291,10 +1636,10 @@ internal class Room
 
     public void UpdateUserStatusses()
     {
-        List<RoomUser>.Enumerator Users = UserList.GetEnumerator();
-        while (Users.MoveNext())
+        foreach (RoomUser User in this.UserList)
         {
-            UpdateUserStatus(Users.Current);
+            UpdateUserStatus(User);
+
         }
     }
 
@@ -1358,8 +1703,8 @@ internal class Room
         }
         if (User.Statusses.ContainsKey("lay") || User.Statusses.ContainsKey("sit"))
         {
-            User.Statusses.Remove("lay");
-            User.Statusses.Remove("sit");
+            User.Statusses.Remove("lay", out var _);
+            User.Statusses.Remove("sit", out var _);
             User.UpdateNeeded = true;
         }
         double newZ = SqAbsoluteHeight(User.X, User.Y);
@@ -1372,7 +1717,7 @@ internal class Room
         {
             if (!User.Statusses.ContainsKey("sit"))
             {
-                User.Statusses.Add("sit", "1.0");
+                User.Statusses.TryAdd("sit", "1.0");
             }
             User.Z = Model.SqFloorHeight[User.X, User.Y];
             User.RotHead = Model.SqSeatRot[User.X, User.Y];
@@ -1779,7 +2124,7 @@ internal class Room
             {
                 if (!User.Statusses.ContainsKey("sit"))
                 {
-                    User.Statusses.Add("sit", Item3.GetBaseItem().Height.ToString().Replace(',', '.'));
+                    User.Statusses.TryAdd("sit", Item3.GetBaseItem().Height.ToString().Replace(',', '.'));
                 }
                 User.Z = Item3.Z;
                 User.RotHead = Item3.Rot;
@@ -1790,7 +2135,7 @@ internal class Room
             {
                 if (!User.Statusses.ContainsKey("lay"))
                 {
-                    User.Statusses.Add("lay", Item3.GetBaseItem().Height.ToString().Replace(',', '.') + " null");
+                    User.Statusses.TryAdd("lay", Item3.GetBaseItem().Height.ToString().Replace(',', '.') + " null");
                 }
                 User.Z = Item3.Z;
                 User.RotHead = Item3.Rot;
@@ -1911,7 +2256,7 @@ internal class Room
 
     public RoomItem FindItem(uint Id)
     {
-        foreach (RoomItem Item in Items)
+        foreach (RoomItem Item in Items.Values)
         {
             if (Item.Id == Id)
             {

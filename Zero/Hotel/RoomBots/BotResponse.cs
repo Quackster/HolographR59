@@ -5,13 +5,11 @@ namespace Zero.Hotel.RoomBots;
 internal class BotResponse
 {
     private uint Id;
-
     public uint BotId;
 
-    public List<string> Keywords;
+    public SynchronizedCollection<string> Keywords;
 
     public string ResponseText;
-
     public string ResponseType;
 
     public int ServeId;
@@ -20,12 +18,12 @@ internal class BotResponse
     {
         this.Id = Id;
         this.BotId = BotId;
-        this.Keywords = new List<string>();
+        this.Keywords = new SynchronizedCollection<string>();
         this.ResponseText = ResponseText;
         this.ResponseType = ResponseType;
         this.ServeId = ServeId;
-        string[] array = Keywords.Split(';');
-        foreach (string Keyword in array)
+
+        foreach (string Keyword in Keywords.Split(';'))
         {
             this.Keywords.Add(Keyword.ToLower());
         }
@@ -33,16 +31,14 @@ internal class BotResponse
 
     public bool KeywordMatched(string Message)
     {
-        lock (Keywords)
+        foreach (string Keyword in Keywords)
         {
-            foreach (string Keyword in Keywords)
+            if (Message.ToLower().Contains(Keyword.ToLower()))
             {
-                if (Message.ToLower().Contains(Keyword.ToLower()))
-                {
-                    return true;
-                }
+                return true;
             }
         }
+
         return false;
     }
 }

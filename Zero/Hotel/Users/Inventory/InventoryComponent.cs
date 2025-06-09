@@ -10,9 +10,9 @@ namespace Zero.Hotel.Users.Inventory;
 
 internal class InventoryComponent
 {
-    private List<UserItem> InventoryItems;
+    private SynchronizedCollection<UserItem> InventoryItems;
 
-    private List<Pet> InventoryPets;
+    private SynchronizedCollection<Pet> InventoryPets;
 
     public uint UserId;
 
@@ -23,8 +23,8 @@ internal class InventoryComponent
     public InventoryComponent(uint UserId)
     {
         this.UserId = UserId;
-        InventoryItems = new List<UserItem>();
-        InventoryPets = new List<Pet>();
+        InventoryItems = new SynchronizedCollection<UserItem>();
+        InventoryPets = new SynchronizedCollection<Pet>();
     }
 
     public void ClearItems()
@@ -100,29 +100,27 @@ internal class InventoryComponent
 
     public Pet GetPet(uint Id)
     {
-        List<Pet>.Enumerator Pets = InventoryPets.GetEnumerator();
-        while (Pets.MoveNext())
+        foreach (var Pet in InventoryPets)
         {
-            Pet Pet = Pets.Current;
             if (Pet.PetId == Id)
             {
                 return Pet;
             }
         }
+
         return null;
     }
 
     public UserItem GetItem(uint Id)
     {
-        List<UserItem>.Enumerator Items = InventoryItems.GetEnumerator();
-        while (Items.MoveNext())
+        foreach (UserItem Item in this.InventoryItems)
         {
-            UserItem Item = Items.Current;
             if (Item.Id == Id)
             {
                 return Item;
             }
         }
+
         return null;
     }
 
@@ -194,13 +192,14 @@ internal class InventoryComponent
     public ServerMessage SerializeItemInventory()
     {
         ServerMessage Message = new ServerMessage(140u);
-        Message.AppendInt32(ItemCount);
-        List<UserItem>.Enumerator eItems = InventoryItems.GetEnumerator();
-        while (eItems.MoveNext())
+        Message.AppendInt32(this.ItemCount);
+
+        foreach (UserItem eItems in this.InventoryItems)
         {
-            eItems.Current.Serialize(Message, Inventory: true);
+            eItems.Serialize(Message, true);
         }
-        Message.AppendInt32(ItemCount);
+
+        Message.AppendInt32(this.ItemCount);
         return Message;
     }
 

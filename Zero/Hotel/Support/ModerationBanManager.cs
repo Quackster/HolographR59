@@ -8,11 +8,11 @@ namespace Zero.Hotel.Support;
 
 internal class ModerationBanManager
 {
-    public List<ModerationBan> Bans;
+    public SynchronizedCollection<ModerationBan> Bans;
 
     public ModerationBanManager()
     {
-        Bans = new List<ModerationBan>();
+        Bans = new SynchronizedCollection<ModerationBan>();
     }
 
     public void LoadBans()
@@ -40,8 +40,6 @@ internal class ModerationBanManager
 
     public void CheckForBanConflicts(GameClient Client)
     {
-        lock (Bans)
-        {
             foreach (ModerationBan Ban in Bans)
             {
                 if (!Ban.Expired)
@@ -56,7 +54,6 @@ internal class ModerationBanManager
                     }
                 }
             }
-        }
     }
 
     public void BanUser(GameClient Client, string Moderator, double LengthSeconds, string Reason, bool IpBan)

@@ -3,16 +3,17 @@ using System.Collections.Generic;
 using System.Data;
 using Zero.Core;
 using Zero.Storage;
+using System.Collections.Concurrent;
 
 namespace Zero.Hotel.Items;
 
 internal class ItemManager
 {
-    private Dictionary<uint, Item> Items;
+    private ConcurrentDictionary<uint, Item> Items;
 
     public void LoadItems()
     {
-        Items = new Dictionary<uint, Item>();
+        Items = new ConcurrentDictionary<uint, Item>();
         DataTable ItemData = null;
         using (DatabaseClient dbClient = HolographEnvironment.GetDatabase().GetClient())
         {
@@ -26,7 +27,7 @@ internal class ItemManager
             {
                 try
                 {
-                    Items.Add((uint)Row["id"], new Item((uint)Row["id"], (int)Row["sprite_id"], (string)Row["public_name"], (string)Row["item_name"], (string)Row["type"], (int)Row["width"], (int)Row["length"], (double)Row["stack_height"], HolographEnvironment.EnumToBool(Row["can_stack"].ToString()), HolographEnvironment.EnumToBool(Row["is_walkable"].ToString()), HolographEnvironment.EnumToBool(Row["can_sit"].ToString()), HolographEnvironment.EnumToBool(Row["allow_recycle"].ToString()), HolographEnvironment.EnumToBool(Row["allow_trade"].ToString()), HolographEnvironment.EnumToBool(Row["allow_marketplace_sell"].ToString()), HolographEnvironment.EnumToBool(Row["allow_gift"].ToString()), HolographEnvironment.EnumToBool(Row["allow_inventory_stack"].ToString()), (string)Row["interaction_type"], (int)Row["interaction_modes_count"], (string)Row["vending_ids"]));
+                    Items.TryAdd((uint)Row["id"], new Item((uint)Row["id"], (int)Row["sprite_id"], (string)Row["public_name"], (string)Row["item_name"], (string)Row["type"], (int)Row["width"], (int)Row["length"], (double)Row["stack_height"], HolographEnvironment.EnumToBool(Row["can_stack"].ToString()), HolographEnvironment.EnumToBool(Row["is_walkable"].ToString()), HolographEnvironment.EnumToBool(Row["can_sit"].ToString()), HolographEnvironment.EnumToBool(Row["allow_recycle"].ToString()), HolographEnvironment.EnumToBool(Row["allow_trade"].ToString()), HolographEnvironment.EnumToBool(Row["allow_marketplace_sell"].ToString()), HolographEnvironment.EnumToBool(Row["allow_gift"].ToString()), HolographEnvironment.EnumToBool(Row["allow_inventory_stack"].ToString()), (string)Row["interaction_type"], (int)Row["interaction_modes_count"], (string)Row["vending_ids"]));
                     i++;
                 }
                 catch (Exception)

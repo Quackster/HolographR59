@@ -9,7 +9,7 @@ namespace Zero.Hotel.Users.Inventory;
 
 internal class AvatarEffectsInventoryComponent
 {
-    private List<AvatarEffect> Effects;
+    private SynchronizedCollection<AvatarEffect> Effects;
 
     private uint UserId;
 
@@ -19,7 +19,7 @@ internal class AvatarEffectsInventoryComponent
 
     public AvatarEffectsInventoryComponent(uint UserId)
     {
-        Effects = new List<AvatarEffect>();
+        Effects = new SynchronizedCollection<AvatarEffect>();
         this.UserId = UserId;
         CurrentEffect = -1;
     }
@@ -128,8 +128,6 @@ internal class AvatarEffectsInventoryComponent
         {
             return true;
         }
-        lock (Effects)
-        {
             foreach (AvatarEffect Effect in Effects)
             {
                 if ((IfEnabledOnly && !Effect.Activated) || Effect.HasExpired || Effect.EffectId != EffectId)
@@ -138,14 +136,11 @@ internal class AvatarEffectsInventoryComponent
                 }
                 return true;
             }
-        }
         return false;
     }
 
     public AvatarEffect GetEffect(int EffectId, bool IfEnabledOnly)
     {
-        lock (Effects)
-        {
             foreach (AvatarEffect Effect in Effects)
             {
                 if ((!IfEnabledOnly || Effect.Activated) && Effect.EffectId == EffectId)
@@ -153,7 +148,6 @@ internal class AvatarEffectsInventoryComponent
                     return Effect;
                 }
             }
-        }
         return null;
     }
 
@@ -161,8 +155,6 @@ internal class AvatarEffectsInventoryComponent
     {
         ServerMessage Message = new ServerMessage(460u);
         Message.AppendInt32(Count);
-        lock (Effects)
-        {
             foreach (AvatarEffect Effect in Effects)
             {
                 Message.AppendInt32(Effect.EffectId);
@@ -170,14 +162,11 @@ internal class AvatarEffectsInventoryComponent
                 Message.AppendBoolean(!Effect.Activated);
                 Message.AppendInt32(Effect.TimeLeft);
             }
-        }
         return Message;
     }
 
     public void CheckExpired()
     {
-        lock (Effects)
-        {
             List<int> ToRemove = new List<int>();
             foreach (AvatarEffect Effect in Effects)
             {
@@ -190,7 +179,6 @@ internal class AvatarEffectsInventoryComponent
             {
                 StopEffect(trmv);
             }
-        }
     }
 
     private GameClient GetClient()

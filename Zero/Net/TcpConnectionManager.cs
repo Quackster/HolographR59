@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 
 namespace Zero.Net;
@@ -6,7 +7,7 @@ internal class TcpConnectionManager
 {
     private readonly int MAX_SIMULTANEOUS_CONNECTIONS = 512;
 
-    private Dictionary<uint, TcpConnection> Connections;
+    private ConcurrentDictionary<uint, TcpConnection> Connections;
 
     private TcpConnectionListener Listener;
 
@@ -14,7 +15,7 @@ internal class TcpConnectionManager
 
     public TcpConnectionManager(string LocalIP, int Port, int maxSimultaneousConnections)
     {
-        Connections = new Dictionary<uint, TcpConnection>(maxSimultaneousConnections);
+        Connections = new ConcurrentDictionary<uint, TcpConnection>(/*initialCapicity*/);
         MAX_SIMULTANEOUS_CONNECTIONS = maxSimultaneousConnections;
         Listener = new TcpConnectionListener(LocalIP, Port, this);
     }
@@ -47,13 +48,14 @@ internal class TcpConnectionManager
 
     public void HandleNewConnection(TcpConnection connection)
     {
-        Connections.Add(connection.Id, connection);
+        Connections.TryAdd(connection.Id, connection);
         HolographEnvironment.GetGame().GetClientManager().StartClient(connection.Id);
     }
 
     public void DropConnection(uint Id)
     {
         GetConnection(Id)?.Stop();
+        Connections.TryRemove(Id, out var _);
     }
 
     public bool VerifyConnection(uint Id)

@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Text;
@@ -12,17 +14,16 @@ namespace Zero.Hotel.Navigators;
 
 internal class Navigator
 {
-    private Dictionary<int, string> PublicCategories;
 
-    private List<FlatCat> PrivateCategories;
-
-    private Dictionary<int, PublicItem> PublicItems;
+    private ConcurrentDictionary<int, string> PublicCategories;
+    private ConcurrentDictionary<int, FlatCat> PrivateCategories;
+    private ConcurrentDictionary<int, PublicItem> PublicItems;
 
     public void Initialize()
     {
-        PublicCategories = new Dictionary<int, string>();
-        PrivateCategories = new List<FlatCat>();
-        PublicItems = new Dictionary<int, PublicItem>();
+        PublicCategories = new ConcurrentDictionary<int, string>();
+        PrivateCategories = new ConcurrentDictionary<int, FlatCat>();
+        PublicItems = new ConcurrentDictionary<int, PublicItem>();
         DataTable dPubCats = null;
         DataTable dPrivCats = null;
         DataTable dPubItems = null;
@@ -36,14 +37,14 @@ internal class Navigator
         {
             foreach (DataRow Row in dPubCats.Rows)
             {
-                PublicCategories.Add((int)Row["id"], (string)Row["caption"]);
+                PublicCategories.TryAdd((int)Row["id"], (string)Row["caption"]);
             }
         }
         if (dPrivCats != null)
         {
             foreach (DataRow Row in dPrivCats.Rows)
             {
-                PrivateCategories.Add(new FlatCat((int)Row["id"], (string)Row["caption"], (int)Row["min_rank"]));
+                PrivateCategories.TryAdd((int)Row["id"], new FlatCat((int)Row["id"], (string)Row["caption"], (int)Row["min_rank"]));
             }
         }
         if (dPubItems == null)
@@ -52,55 +53,56 @@ internal class Navigator
         }
         foreach (DataRow Row in dPubItems.Rows)
         {
-            PublicItems.Add((int)Row["id"], new PublicItem((int)Row["id"], int.Parse(Row["bannertype"].ToString()), (string)Row["caption"], (string)Row["image"], (!(Row["image_type"].ToString().ToLower() == "internal")) ? PublicImageType.EXTERNAL : PublicImageType.INTERNAL, (uint)Row["room_id"], (int)Row["category_id"], (int)Row["category_parent_id"]));
+            PublicItems.TryAdd((int)Row["id"], new PublicItem((int)Row["id"], int.Parse(Row["bannertype"].ToString()), (string)Row["caption"], (string)Row["image"], (!(Row["image_type"].ToString().ToLower() == "internal")) ? PublicImageType.EXTERNAL : PublicImageType.INTERNAL, (uint)Row["room_id"], (int)Row["category_id"], (int)Row["category_parent_id"]));
         }
     }
 
     public int GetCountForParent(int ParentId)
     {
         int i = 0;
-        lock (PublicItems)
+
+        foreach (PublicItem Item in PublicItems.Values)
         {
-            foreach (PublicItem Item in PublicItems.Values)
+            if (Item.ParentId == ParentId || ParentId == -1)
             {
-                if (Item.ParentId == ParentId || ParentId == -1)
-                {
-                    i++;
-                }
+                i++;
             }
         }
+
         return i;
     }
 
     public FlatCat GetFlatCat(int Id)
     {
-        lock (PrivateCategories)
+        foreach (FlatCat FlatCat in PrivateCategories.Values)
         {
-            foreach (FlatCat FlatCat in PrivateCategories)
+            if (FlatCat.Id == Id)
             {
-                if (FlatCat.Id == Id)
-                {
-                    return FlatCat;
-                }
+                return FlatCat;
             }
         }
+
         return null;
     }
 
     public ServerMessage SerializeFlatCategories()
     {
-        ServerMessage Cats = new ServerMessage(221u);
+        ServerMessage Cats = new ServerMessage(221);
         Cats.AppendInt32(PrivateCategories.Count);
-        foreach (FlatCat FlatCat in PrivateCategories)
+
+        foreach (FlatCat FlatCat in PrivateCategories.Values)
         {
             if (FlatCat.Id > 0)
             {
-                Cats.AppendBoolean(Bool: true);
+                Cats.AppendBoolean(true);
             }
+
             Cats.AppendInt32(FlatCat.Id);
             Cats.AppendStringWithBreak(FlatCat.Caption);
         }
+
         Cats.AppendStringWithBreak("");
+
         return Cats;
     }
 
@@ -108,13 +110,10 @@ internal class Navigator
     {
         ServerMessage Frontpage = new ServerMessage(450u);
         Frontpage.AppendInt32(GetCountForParent(-1));
-        lock (PublicItems)
-        {
             foreach (PublicItem Pub in PublicItems.Values)
             {
                 Pub.Serialize(Frontpage);
             }
-        }
         return Frontpage;
     }
 
@@ -125,14 +124,11 @@ internal class Navigator
         Rooms.AppendInt32(6);
         Rooms.AppendStringWithBreak("");
         Rooms.AppendInt32(Session.GetHabbo().FavoriteRooms.Count);
-        lock (Session.GetHabbo().FavoriteRooms)
-        {
             foreach (uint Id in Session.GetHabbo().FavoriteRooms)
             {
                 HolographEnvironment.GetGame().GetRoomManager().GenerateRoomData(Id)
                     .Serialize(Rooms, ShowEvents: false);
             }
-        }
         return Rooms;
     }
 
@@ -188,7 +184,7 @@ internal class Navigator
 
     public ServerMessage SerializePopularRoomTags()
     {
-        Dictionary<string, int> Tags = new Dictionary<string, int>();
+        ConcurrentDictionary<string, int> Tags = new ConcurrentDictionary<string, int>();
         DataTable Data = null;
         using (DatabaseClient dbClient = HolographEnvironment.GetDatabase().GetClient())
         {
@@ -212,7 +208,7 @@ internal class Navigator
                     }
                     else
                     {
-                        Tags.Add(Tag, (int)Row["users_now"]);
+                        Tags.TryAdd(Tag, (int)Row["users_now"]);
                     }
                 }
             }
@@ -298,79 +294,89 @@ internal class Navigator
         DataTable Data = null;
         using (DatabaseClient dbClient = HolographEnvironment.GetDatabase().GetClient())
         {
-            List<MessengerBuddy> buddies = default(List<MessengerBuddy>);
             switch (Mode)
             {
                 case -5:
                     {
                         List<uint> FriendRooms = new List<uint>();
-                        bool lockTaken2 = false;
-                        try
+
+                        foreach (MessengerBuddy Buddy in Session.GetHabbo().GetMessenger().GetBuddies())
                         {
-                            Monitor.Enter(buddies = Session.GetHabbo().GetMessenger().GetBuddies(), ref lockTaken2);
-                            foreach (MessengerBuddy Buddy in Session.GetHabbo().GetMessenger().GetBuddies())
+                            GameClient Client = HolographEnvironment.GetGame().GetClientManager().GetClientByHabbo(Buddy.Id);
+
+                            if (Client == null || Client.GetHabbo() == null || Client.GetHabbo().CurrentRoomId <= 0)
                             {
-                                GameClient Client = HolographEnvironment.GetGame().GetClientManager().GetClientByHabbo(Buddy.Id);
-                                if (Client != null && Client.GetHabbo() != null && Client.GetHabbo().CurrentRoomId != 0)
-                                {
-                                    FriendRooms.Add(Client.GetHabbo().CurrentRoomId);
-                                }
+                                continue;
                             }
+
+                            FriendRooms.Add(Client.GetHabbo().CurrentRoomId);
                         }
-                        finally
-                        {
-                            if (lockTaken2)
-                            {
-                                Monitor.Exit(buddies);
-                            }
-                        }
+
                         StringBuilder _Query = new StringBuilder("SELECT * FROM rooms WHERE");
+
                         int _i = 0;
+
                         foreach (uint Room in FriendRooms)
                         {
                             if (_i > 0)
                             {
                                 _Query.Append(" OR");
                             }
+
                             _Query.Append(" id = '" + Room + "'");
+
                             _i++;
                         }
+
                         _Query.Append(" ORDER BY users_now DESC LIMIT 40");
-                        Data = ((_i <= 0) ? null : dbClient.ReadDataTable(_Query.ToString()));
+
+                        if (_i > 0)
+                        {
+                            Data = dbClient.ReadDataTable(_Query.ToString());
+                        }
+                        else
+                        {
+                            Data = null;
+                        }
+
                         break;
                     }
                 case -4:
                     {
-                        List<string> FriendsNames = new List<string>();
-                        bool lockTaken = false;
-                        try
+                        ConcurrentDictionary<uint, string> FriendsNames = new ConcurrentDictionary<uint, string>();
+
+                        foreach (MessengerBuddy Buddy in Session.GetHabbo().GetMessenger().GetBuddies())
                         {
-                            Monitor.Enter(buddies = Session.GetHabbo().GetMessenger().GetBuddies(), ref lockTaken);
-                            foreach (MessengerBuddy Buddy in Session.GetHabbo().GetMessenger().GetBuddies())
-                            {
-                                FriendsNames.Add(Buddy.Username);
-                            }
+                            FriendsNames.TryAdd(Buddy.Id, Buddy.Username);
                         }
-                        finally
-                        {
-                            if (lockTaken)
-                            {
-                                Monitor.Exit(buddies);
-                            }
-                        }
+
                         StringBuilder Query = new StringBuilder("SELECT * FROM rooms WHERE");
+
                         int i = 0;
-                        foreach (string Name in FriendsNames)
+
+                        foreach (string Name in FriendsNames.Values)
                         {
                             if (i > 0)
                             {
                                 Query.Append(" OR");
                             }
+
                             Query.Append(" owner = '" + Name + "'");
+
                             i++;
                         }
+
                         Query.Append(" ORDER BY users_now DESC LIMIT 40");
-                        Data = ((i <= 0) ? null : dbClient.ReadDataTable(Query.ToString()));
+
+                        if (i > 0)
+                        {
+                            Data = dbClient.ReadDataTable(Query.ToString());
+                        }
+                        else
+                        {
+                            Data = null;
+                        }
+
                         break;
                     }
                 case -3:

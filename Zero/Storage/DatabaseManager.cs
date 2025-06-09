@@ -77,40 +77,47 @@ internal class DatabaseManager
 
     public DatabaseClient GetClient()
     {
-        for (uint i = 0u; i < Clients.Length; i++)
+        for (uint i = 0; i < Clients.Length; i++)
         {
-            if (!AvailableClients[i])
+            if (AvailableClients[i] == true)
             {
-                continue;
-            }
-            ClientStarvation = 0;
-            if (Clients[i].State == ConnectionState.Closed)
-            {
-                try
+                ClientStarvation = 0;
+
+                if (Clients[i].State == ConnectionState.Closed)
                 {
-                    Clients[i].Connect();
+                    try
+                    {
+                        Clients[i].Connect();
+                    }
+
+                    catch (Exception e)
+                    {
+                        HolographEnvironment.GetLogging().WriteLine("Could not get database client: " + e.Message, LogLevel.Error);
+                    }
                 }
-                catch (Exception ex)
+
+                if (Clients[i].State == ConnectionState.Open)
                 {
-                    HolographEnvironment.GetLogging().WriteLine("Could not get database client: " + ex.Message, LogLevel.Error);
+                    AvailableClients[i] = false;
+
+                    Clients[i].UpdateLastActivity();
+                    return Clients[i];
                 }
-            }
-            if (Clients[i].State == ConnectionState.Open)
-            {
-                AvailableClients[i] = false;
-                Clients[i].UpdateLastActivity();
-                return Clients[i];
             }
         }
+
         ClientStarvation++;
-        if (ClientStarvation >= (Clients.Length + 1) / 2)
+
+        if (ClientStarvation >= ((Clients.Length + 1) / 2))
         {
             ClientStarvation = 0;
-            SetClientAmount((uint)((float)Clients.Length + 1.3f));
+            SetClientAmount((uint)(Clients.Length + 1 * 1.3f));
             return GetClient();
         }
-        DatabaseClient Anonymous = new DatabaseClient(0u, this);
+
+        DatabaseClient Anonymous = new DatabaseClient(0, this);
         Anonymous.Connect();
+
         return Anonymous;
     }
 

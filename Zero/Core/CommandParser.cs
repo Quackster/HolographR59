@@ -18,7 +18,7 @@ internal class CommandParser
                 break;
             case "nav":
                 HolographEnvironment.GetGame().GetNavigator().Initialize();
-                HolographEnvironment.GetLogging().WriteLine("Navegador Atualizado!", LogLevel.Warning);
+                HolographEnvironment.GetLogging().WriteLine("Navigator updated!", LogLevel.Warning);
                 break;
             case "reload_items":
                 HolographEnvironment.GetGame().GetItemManager().LoadItems();
@@ -32,17 +32,17 @@ internal class CommandParser
             case "cat":
                 HolographEnvironment.GetGame().GetCatalog().Initialize();
                 HolographEnvironment.GetGame().GetClientManager().BroadcastMessage(new ServerMessage(441u));
-                HolographEnvironment.GetLogging().WriteLine("Catálogo Atualizado!.");
+                HolographEnvironment.GetLogging().WriteLine("Catalog updated!.");
                 break;
             case "rank":
                 HolographEnvironment.GetGame().GetRoleManager().LoadRoles();
                 HolographEnvironment.GetGame().GetRoleManager().LoadRights();
-                HolographEnvironment.GetLogging().WriteLine("Ranks Atualizados!");
+                HolographEnvironment.GetLogging().WriteLine("Ranks updated!");
                 break;
             case "cls":
-            case "limp":
+            case "clear":
                 HolographEnvironment.GetLogging().Clear();
-                HolographEnvironment.GetLogging().WriteLine("ZeroEmu | Console Limpo!", LogLevel.Warning);
+                HolographEnvironment.GetLogging().WriteLine("Clered!", LogLevel.Warning);
                 break;
             case "svr":
                 HolographEnvironment.GetLogging().WriteLine("Available commands are: cls, close, help, reload_catalog, reload_navigator, reload_roles, reload_help, reload_items, plugins, unload_all_plugins, unload_plugin [name]");
@@ -53,15 +53,15 @@ internal class CommandParser
                     string Msg = MergeParams(Params, 1);
                     HotelAlert.AppendStringWithBreak(Msg);
                     HolographEnvironment.GetGame().GetClientManager().BroadcastMessage(HotelAlert);
-                    HolographEnvironment.GetLogging().WriteLine("Hotel Alertado!.", LogLevel.Warning);
+                    HolographEnvironment.GetLogging().WriteLine("Hotel alerted!.", LogLevel.Warning);
                     break;
                 }
             case "close":
-            case "sair":
+            case "shutdown":
                 HolographEnvironment.Destroy();
                 break;
             default:
-                HolographEnvironment.GetLogging().WriteLine("Comando Inexistente!", LogLevel.Warning);
+                HolographEnvironment.GetLogging().WriteLine("Command not found!", LogLevel.Warning);
                 break;
         }
     }
